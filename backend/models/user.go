@@ -89,3 +89,34 @@ func UpdateUserLastLogin(db *sql.DB, userID int) error {
 	_, err := db.Exec(query, userID)
 	return err
 }
+
+func GetUserByEmail(db *sql.DB, email string) (*User, error) {
+	var user User
+	var lastLogin sql.NullTime
+	
+	query := `SELECT id, username, email, password, role, is_active, last_login, created_at, updated_at 
+	          FROM users WHERE email = ? AND is_active = true`
+	
+	err := db.QueryRow(query, email).Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.Password,
+		&user.Role,
+		&user.IsActive,
+		&lastLogin,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+	
+	if err != nil {
+		return nil, err
+	}
+	
+	// Convert sql.NullTime to *time.Time
+	if lastLogin.Valid {
+		user.LastLogin = &lastLogin.Time
+	}
+	
+	return &user, nil
+}

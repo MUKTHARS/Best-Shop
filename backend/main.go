@@ -6,7 +6,7 @@ import (
 	"stock-management/database"
 	"stock-management/handlers"
 	"stock-management/middleware"
-
+	"stock-management/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,7 +17,13 @@ func main() {
 	// Initialize database
 	database.InitDB()
 	defer database.CloseDB()
-
+log.Println("🔄 Resetting all user passwords...")
+	err := utils.ResetAllUserPasswords(database.GetDB())
+	if err != nil {
+		log.Printf("❌ Password reset failed: %v", err)
+	} else {
+		log.Println("✅ All passwords reset successfully")
+	}
 	// Create Gin router
 	router := gin.Default()
 
@@ -37,6 +43,8 @@ func main() {
 	{
 		// User routes
 		auth.GET("/profile", handlers.GetProfile)
+		auth.GET("/users", handlers.GetUsers) 
+		auth.POST("/register", handlers.Register)
 
 		// Category routes
 		auth.GET("/categories", handlers.GetCategories)

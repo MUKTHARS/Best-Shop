@@ -18,20 +18,29 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	log.Printf("🔐 Login attempt for user: %s", req.Username)
+	log.Printf("🔐 Login attempt for identifier: %s", req.Username)
 
 	db := database.GetDB()
+	
+	// Try to find user by username first
 	user, err := models.GetUserByUsername(db, req.Username)
 	if err != nil {
-		log.Printf("❌ User not found: %s, error: %v", req.Username, err)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
-		return
+		log.Printf("⚠️ User not found by username: %s, trying email...", req.Username)
+		
+		// If not found by username, try by email
+		user, err = models.GetUserByEmail(db, req.Username)
+		if err != nil {
+			log.Printf("❌ User not found by username or email: %s, error: %v", req.Username, err)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+			return
+		}
+		log.Printf("✅ User found by email: %s, role: %s", user.Username, user.Role)
+	} else {
+		log.Printf("✅ User found by username: %s, role: %s", user.Username, user.Role)
 	}
 
-	log.Printf("✅ User found: %s, role: %s", user.Username, user.Role)
-
 	if !utils.CheckPasswordHash(req.Password, user.Password) {
-		log.Printf("❌ Invalid password for user: %s", req.Username)
+		log.Printf("❌ Invalid password for user: %s", user.Username)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
@@ -56,6 +65,7 @@ func Login(c *gin.Context) {
 		"user":  user,
 	})
 }
+
 func GetProfile(c *gin.Context) {
 	userID := c.GetInt("user_id")
 	
