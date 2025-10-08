@@ -8,8 +8,12 @@ import {
   StyleSheet,
   Modal,
   Alert,
-  Image
+  Image,
+  ActivityIndicator,
+  Platform
 } from 'react-native';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import { stockAPI } from '../api/api';
 
 const EditProductModal = ({ product, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -30,7 +34,17 @@ const EditProductModal = ({ product, onSave, onCancel }) => {
     barcode: '',
     low_stock_threshold: '',
   });
+  const [newImage, setNewImage] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:8080' : 'http://localhost:8080';
+ const getFullImageUrl = (imagePath) => {
+    if (!imagePath) return null;
+    if (imagePath.startsWith('http')) return imagePath;
+    if (imagePath.startsWith('/uploads')) return `${API_BASE_URL}${imagePath}`;
+    return `${API_BASE_URL}/uploads/${imagePath}`;
+  };
 
+  const currentImageUrl = newImage ? newImage.uri : getFullImageUrl(formData.image_url);
   useEffect(() => {
     if (product) {
       setFormData({
@@ -54,10 +68,104 @@ const EditProductModal = ({ product, onSave, onCancel }) => {
     }
   }, [product]);
 
-  const handleSave = () => {
+  // const getFullImageUrl = (imagePath) => {
+  //   if (!imagePath) return null;
+  //   if (imagePath.startsWith('http')) return imagePath;
+  //   if (imagePath.startsWith('/uploads')) return `${API_BASE_URL}${imagePath}`;
+  //   return `${API_BASE_URL}/uploads/${imagePath}`;
+  // };
+
+  const handleImagePick = () => {
+    Alert.alert('Select Image', 'Choose image source', [
+      {
+        text: 'Camera',
+        onPress: takePhoto,
+      },
+      {
+        text: 'Gallery',
+        onPress: pickImage,
+      },
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+    ]);
+  };
+
+  const takePhoto = () => {
+    const options = {
+      mediaType: 'photo',
+      includeBase64: false,
+      maxHeight: 2000,
+      maxWidth: 2000,
+    };
+
+    launchCamera(options, (response) => {
+      if (response.didCancel) {
+        console.log('User cancelled camera');
+      } else if (response.error) {
+        Alert.alert('Error', 'Camera error: ' + response.error);
+      } else {
+        setNewImage(response.assets[0]);
+      }
+    });
+  };
+
+  const pickImage = () => {
+    const options = {
+      mediaType: 'photo',
+      includeBase64: false,
+      maxHeight: 2000,
+      maxWidth: 2000,
+    };
+
+    launchImageLibrary(options, (response) => {
+      if (response.didCancel) {
+        console.log('User cancelled image picker');
+      } else if (response.error) {
+        Alert.alert('Error', 'Image picker error: ' + response.error);
+      } else {
+        setNewImage(response.assets[0]);
+      }
+    });
+  };
+
+  const uploadImage = async () => {
+    if (!newImage) return null;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('image', {
+      uri: Platform.OS === 'ios' ? newImage.uri.replace('file://', '') : newImage.uri,
+      type: newImage.type || 'image/jpeg',
+      name: newImage.fileName || 'photo.jpg',
+    });
+
+    try {
+      const response = await stockAPI.uploadImage(formData);
+      setIsUploading(false);
+      return response.imageUrl;
+    } catch (error) {
+      setIsUploading(false);
+      Alert.alert('Error', 'Failed to upload image');
+      return null;
+    }
+  };
+
+  const handleSave = async () => {
     if (!formData.item_id || !formData.item_name) {
       Alert.alert('Error', 'Item ID and Item Name are required');
       return;
+    }
+
+    let finalImageUrl = formData.image_url;
+
+    // Upload new image if selected
+    if (newImage) {
+      const uploadedImageUrl = await uploadImage();
+      if (uploadedImageUrl) {
+        finalImageUrl = uploadedImageUrl;
+      }
     }
 
     const updatedProduct = {
@@ -69,10 +177,18 @@ const EditProductModal = ({ product, onSave, onCancel }) => {
       subcategory_id: parseInt(formData.subcategory_id) || null,
       brand_id: parseInt(formData.brand_id) || null,
       low_stock_threshold: parseInt(formData.low_stock_threshold) || 0,
+      image_url: finalImageUrl,
     };
 
     onSave(updatedProduct);
   };
+
+  const removeImage = () => {
+    setFormData({ ...formData, image_url: '' });
+    setNewImage(null);
+  };
+
+  // const currentImageUrl = newImage ? newImage.uri : getFullImageUrl(formData.image_url);
 
   return (
     <View style={styles.modalOverlay}>
@@ -185,27 +301,57 @@ const EditProductModal = ({ product, onSave, onCancel }) => {
             keyboardType="number-pad"
           />
 
-          {/* Image URL field */}
-          <TextInput
-            style={styles.input}
-            placeholder="Image URL"
-            value={formData.image_url}
-            onChangeText={(text) => setFormData({ ...formData, image_url: text })}
-          />
+          {/* Image Section */}
+          <View style={styles.imageSection}>
+            <Text style={styles.sectionTitle}>Product Image</Text>
+            
+            {/* Current Image Preview */}
+            {currentImageUrl && (
+              <View style={styles.imagePreviewContainer}>
+                <Text style={styles.imagePreviewLabel}>
+                  {newImage ? 'New Image Preview:' : 'Current Image:'}
+                </Text>
+                <Image 
+                  source={{ uri: currentImageUrl }} 
+                  style={styles.imagePreview}
+                  resizeMode="contain"
+                  onError={(error) => console.log('Image preview error:', error)}
+                />
+                {newImage && (
+                  <Text style={styles.newImageText}>New image selected: {newImage.fileName || 'photo'}</Text>
+                )}
+                {formData.image_url && !newImage && (
+                  <Text style={styles.imageUrlText}>{formData.image_url}</Text>
+                )}
+              </View>
+            )}
 
-          {/* Image preview */}
-          {formData.image_url && (
-            <View style={styles.imagePreviewContainer}>
-              <Text style={styles.imagePreviewLabel}>Current Image:</Text>
-              <Image 
-                source={{ uri: formData.image_url.startsWith('http') ? formData.image_url : `http://10.0.2.2:8080${formData.image_url}` }} 
-                style={styles.imagePreview}
-                resizeMode="contain"
-                onError={(error) => console.log('Image preview error:', error)}
-              />
-              <Text style={styles.imageUrlText}>{formData.image_url}</Text>
+            {/* Image Action Buttons */}
+            <View style={styles.imageButtonsContainer}>
+              <TouchableOpacity 
+                style={[styles.imageButton, styles.uploadButton]}
+                onPress={handleImagePick}
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.imageButtonText}>
+                    {newImage ? 'Change Image' : 'Upload New Image'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              {(formData.image_url || newImage) && (
+                <TouchableOpacity 
+                  style={[styles.imageButton, styles.removeButton]}
+                  onPress={removeImage}
+                >
+                  <Text style={styles.imageButtonText}>Remove Image</Text>
+                </TouchableOpacity>
+              )}
             </View>
-          )}
+          </View>
 
           <TextInput
             style={[styles.input, styles.textArea]}
@@ -221,8 +367,16 @@ const EditProductModal = ({ product, onSave, onCancel }) => {
           <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onCancel}>
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>Save Changes</Text>
+          <TouchableOpacity 
+            style={[styles.button, styles.saveButton, isUploading && styles.buttonDisabled]} 
+            onPress={handleSave}
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.saveButtonText}>Save Changes</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -241,7 +395,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     width: '90%',
-    maxHeight: '85%',
+    maxHeight: '90%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -263,7 +417,6 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     padding: 20,
-    maxHeight: 500,
   },
   input: {
     backgroundColor: '#f8f8f8',
@@ -300,6 +453,9 @@ const styles = StyleSheet.create({
   saveButton: {
     backgroundColor: '#007AFF',
   },
+  buttonDisabled: {
+    backgroundColor: '#ccc',
+  },
   cancelButtonText: {
     color: '#666',
     fontWeight: '600',
@@ -308,9 +464,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
+  imageSection: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
   imagePreviewContainer: {
     marginBottom: 12,
-    padding: 10,
+    padding: 15,
     backgroundColor: '#f8f8f8',
     borderRadius: 8,
     borderWidth: 1,
@@ -324,9 +489,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   imagePreview: {
-    width: 120,
-    height: 120,
-    borderRadius: 6,
+    width: 150,
+    height: 150,
+    borderRadius: 8,
   },
   imageUrlText: {
     fontSize: 12,
@@ -334,6 +499,34 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  newImageText: {
+    fontSize: 12,
+    color: '#007AFF',
+    marginTop: 8,
+    fontWeight: '600',
+  },
+  imageButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  imageButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  uploadButton: {
+    backgroundColor: '#007AFF',
+  },
+  removeButton: {
+    backgroundColor: '#FF3B30',
+  },
+  imageButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
 
