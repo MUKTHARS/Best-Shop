@@ -4,13 +4,13 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
   StyleSheet,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { authAPI } from '../api/api';
 
 const LoginScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
@@ -18,18 +18,64 @@ const LoginScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
 
+  const testConnection = async () => {
+    try {
+      console.log('🔍 Testing connection to backend...');
+      const response = await fetch('http://10.0.2.2:8080/login', { // Changed to 10.0.2.2 for Android
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username: 'test', password: 'test' }),
+      });
+      console.log('🔍 Connection test response status:', response.status);
+      return response.status !== 404;
+    } catch (error) {
+      console.log('❌ Connection test failed:', error.message);
+      console.log('🔧 Debug info:', {
+        url: 'http://10.0.2.2:8080/login',
+        errorType: error.name,
+        message: error.message
+      });
+      return false;
+    }
+  };
+
   const handleLogin = async () => {
     if (!username || !password) {
-      Alert.alert('Error', 'Please enter both username and password');
+      console.log('❌ Login validation failed: Missing username or password');
       return;
     }
 
+    console.log('🔐 Starting login process for user:', username);
     setIsLoading(true);
+
+    // Test connection first
+    console.log('🔄 Step 1: Testing server connection...');
+    const isConnected = await testConnection();
+    
+    if (!isConnected) {
+      console.log('❌ Step 1 Failed: Cannot connect to server');
+      console.log('🔧 Troubleshooting steps:');
+      console.log('   1. Check if backend server is running on port 8080');
+      console.log('   2. Verify 10.0.2.2:8080 is accessible from Android emulator');
+      console.log('   3. Check if any firewall is blocking the connection');
+      console.log('   4. Ensure backend is not running on a different port');
+      setIsLoading(false);
+      return;
+    }
+
+    console.log('✅ Step 1 Passed: Server connection successful');
+    console.log('🔄 Step 2: Attempting login...');
+
     const result = await login(username, password);
     setIsLoading(false);
 
     if (!result.success) {
-      Alert.alert('Error', result.error);
+      console.log('❌ Step 2 Failed: Login failed -', result.error);
+      console.log('🔧 Login details:', { username, error: result.error });
+    } else {
+      console.log('✅ Step 2 Passed: Login successful');
     }
   };
 
@@ -44,7 +90,7 @@ const LoginScreen = ({ navigation }) => {
         
         <TextInput
           style={styles.input}
-          placeholder="Username"
+          placeholder="Username"  // Changed from email to username
           value={username}
           onChangeText={setUsername}
           autoCapitalize="none"
@@ -74,7 +120,11 @@ const LoginScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         <Text style={styles.demoText}>
-          Demo: admin / admin123
+          Demo: admin / admin123  {/* Updated demo text */}
+        </Text>
+        
+        <Text style={styles.debugText}>
+          Use username: admin, manager, or employee
         </Text>
       </View>
     </KeyboardAvoidingView>
@@ -133,6 +183,12 @@ const styles = StyleSheet.create({
     marginTop: 20,
     color: '#666',
     fontStyle: 'italic',
+  },
+  debugText: {
+    textAlign: 'center',
+    marginTop: 10,
+    color: '#999',
+    fontSize: 12,
   },
 });
 

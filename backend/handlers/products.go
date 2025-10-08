@@ -1,12 +1,15 @@
 package handlers
 
 import (
-    "net/http"
-    "stock-management/database"
-    "stock-management/models"
-    "strconv"
+	"fmt"
+	"math/rand"
+	"net/http"
+	"stock-management/database"
+	"stock-management/models"
+	"strconv"
+	"time"
 
-    "github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 )
 
 func GetSubcategories(c *gin.Context) {
@@ -55,7 +58,15 @@ func GetProducts(c *gin.Context) {
 }
 
 func CreateProduct(c *gin.Context) {
+	
 	var product models.Product
+	if product.SKU == "" {
+    // Generate a unique SKU using timestamp and random number
+    timestamp := time.Now().Unix()
+    random := rand.Intn(1000)
+    product.SKU = fmt.Sprintf("SKU-%d-%d", timestamp, random)
+}
+	
 	if err := c.BindJSON(&product); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return

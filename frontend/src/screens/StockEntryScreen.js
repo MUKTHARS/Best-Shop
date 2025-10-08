@@ -12,7 +12,7 @@ import {
   FlatList,
   Platform
 } from 'react-native';
-// import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { stockAPI } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 

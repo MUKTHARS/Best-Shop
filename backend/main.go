@@ -29,7 +29,7 @@ func main() {
 
 	// Public routes
 	router.POST("/login", handlers.Login)
-	router.POST("/register", handlers.Register)
+	// router.POST("/register", handlers.Register)
 
 	// Protected routes
 	auth := router.Group("/")
