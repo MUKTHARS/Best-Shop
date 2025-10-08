@@ -118,14 +118,7 @@ const LoginScreen = ({ navigation }) => {
             <Text style={styles.buttonText}>Sign In</Text>
           )}
         </TouchableOpacity>
-
-        <Text style={styles.demoText}>
-          Demo: admin / admin123  {/* Updated demo text */}
-        </Text>
         
-        <Text style={styles.debugText}>
-          Use username: admin, manager, or employee
-        </Text>
       </View>
     </KeyboardAvoidingView>
   );
