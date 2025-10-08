@@ -177,6 +177,43 @@ func CreateProduct(db *sql.DB, product *Product) error {
 	return nil
 }
 
+func UpdateProduct(db *sql.DB, product *Product) error {
+	_, err := db.Exec(`
+		UPDATE products 
+		SET item_id=?, item_name=?, category_id=?, subcategory_id=?, brand_id=?, 
+		    model=?, color=?, size=?, mrp=?, selling_price=?, cost_price=?, 
+		    sku=?, barcode=?, image_url=?, description=?, low_stock_threshold=?
+		WHERE id=?`,
+		product.ItemID, product.ItemName, product.CategoryID, product.SubcategoryID, product.BrandID,
+		product.Model, product.Color, product.Size, product.MRP, product.SellingPrice, product.CostPrice,
+		product.SKU, product.Barcode, product.ImageURL, product.Description, product.LowStockThreshold,
+		product.ID)
+	return err
+}
+
+func DeleteProduct(db *sql.DB, productID int) error {
+	_, err := db.Exec("UPDATE products SET is_active = false WHERE id = ?", productID)
+	return err
+}
+
+func GetProductByID(db *sql.DB, id int) (*Product, error) {
+	var p Product
+	err := db.QueryRow(`
+		SELECT id, item_id, item_name, category_id, subcategory_id, brand_id, model, color, size, 
+		       mrp, selling_price, cost_price, sku, barcode, image_url, description, is_active, 
+		       low_stock_threshold, created_at, updated_at
+		FROM products WHERE id = ? AND is_active = true`, id).Scan(
+		&p.ID, &p.ItemID, &p.ItemName, &p.CategoryID, &p.SubcategoryID, &p.BrandID,
+		&p.Model, &p.Color, &p.Size, &p.MRP, &p.SellingPrice, &p.CostPrice,
+		&p.SKU, &p.Barcode, &p.ImageURL, &p.Description, &p.IsActive,
+		&p.LowStockThreshold, &p.CreatedAt, &p.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
 func GetAllProducts(db *sql.DB) ([]Product, error) {
 	rows, err := db.Query(`
 		SELECT id, item_id, item_name, category_id, subcategory_id, brand_id, model, color, size, 

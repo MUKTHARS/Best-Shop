@@ -194,7 +194,7 @@ class AuthAPI extends API {
   }
 }
 
-// ... rest of the StockAPI and UserAPI classes remain the same ...
+
 class StockAPI extends API {
   async getCategories() {
     return this.request({
@@ -215,6 +215,21 @@ class StockAPI extends API {
     return this.request({
       method: 'GET',
       url: '/brands',
+    });
+  }
+
+   async updateProduct(productId, productData) {
+    return this.request({
+      method: 'PUT',
+      url: `/products/${productId}`,
+      data: productData,
+    });
+  }
+
+  async deleteProduct(productId) {
+    return this.request({
+      method: 'DELETE',
+      url: `/products/${productId}`,
     });
   }
 
