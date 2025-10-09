@@ -40,7 +40,7 @@ func main() {
 		auth.POST("/register", handlers.Register)
 		auth.PUT("/users/:id", handlers.UpdateUser)    
 		auth.DELETE("/users/:id", handlers.DeleteUser) 
-
+		auth.POST("/reset-password", handlers.ResetPassword)
 		// Category routes
 		auth.GET("/categories", handlers.GetCategories)
 		auth.POST("/categories", handlers.CreateCategory)

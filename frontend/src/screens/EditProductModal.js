@@ -36,7 +36,7 @@ const EditProductModal = ({ product, onSave, onCancel }) => {
   });
   const [newImage, setNewImage] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
-  const API_BASE_URL = Platform.OS === 'android' ? 'http://192.168.43.41:8080' : 'http://localhost:8080';
+  const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:8080' : 'http://localhost:8080';
  const getFullImageUrl = (imagePath) => {
     if (!imagePath) return null;
     if (imagePath.startsWith('http')) return imagePath;

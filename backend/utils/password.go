@@ -2,149 +2,138 @@ package utils
 
 import (
 	"log"
-	"strings"
 	"golang.org/x/crypto/bcrypt"
 	"database/sql"
+	"stock-management/database"
+	"stock-management/models"
 )
 
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	return string(bytes), err
 }
-func ResetAllUserPasswords(db *sql.DB) error {
-	users := map[string]string{
-		"admin@store.com": "admin123",
-		"manager":         "manager123", 
-		"employee":        "employee123",
-		"test":            "test123",
-		"maddy":           "maddy123",
-	}
 
-	for username, password := range users {
-		// Hash the password properly
-		hashedPassword, err := HashPassword(password)
-		if err != nil {
-			log.Printf("❌ Failed to hash password for %s: %v", username, err)
-			continue
-		}
-
-		// Update the user's password in the database
-		query := `UPDATE users SET password = ? WHERE username = ?`
-		_, err = db.Exec(query, hashedPassword, username)
-		if err != nil {
-			log.Printf("❌ Failed to update password for %s: %v", username, err)
-			continue
-		}
-
-		log.Printf("✅ Password reset for %s: %s -> %s", username, password, hashedPassword)
-	}
-
-	return nil
-}
 func CheckPasswordHash(password, hash string) bool {
 	log.Printf("🔐 Password check - Input: %s, Hash: %s", password, hash)
 	
-	// First, always try bcrypt comparison
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	if err == nil {
-		log.Printf("✅ BCrypt password check successful")
-		return true
-	}
-	
-	log.Printf("❌ BCrypt comparison failed: %v", err)
-	
-	// Handle the specific malformed hash pattern for old users
-	if hash == "$2a$10$8K1p/a0dRa1B0Z2QaK1sE.O4.7b8Q2aK1sE.O4.7b8Q2aK1sE.O4" {
-		log.Printf("🔄 Handling malformed bcrypt hash for legacy users")
-		
-		// Map of usernames to their actual passwords for legacy users
-		legacyPasswords := map[string]string{
-			"admin@store.com": "admin123",
-			"admin":           "admin123",
-			"manager":         "manager123", 
-			"employee":        "employee123",
-			"test":            "test",
-		}
-		
-		// For legacy users, check if the password matches their known password
-		for user, pass := range legacyPasswords {
-			if password == pass {
-				log.Printf("✅ Legacy password matched for user pattern: %s", user)
-				return true
-			}
-		}
-	}
-	
-	// For the new test hashes that start with $2a$10$8K1p/a0dRa1B0Z2QaK1sE.123...
-	if len(hash) > 30 && hash[:30] == "$2a$10$8K1p/a0dRa1B0Z2QaK1sE." {
-		log.Printf("🔄 Handling test bcrypt hash pattern")
-		
-		// Test passwords for the new hash pattern
-		testPasswords := []string{"admin123", "manager123", "employee123", "test123", "test"}
-		for _, testPass := range testPasswords {
-			if password == testPass {
-				log.Printf("✅ Test password matched: %s", testPass)
-				return true
-			}
-		}
-	}
-	
-	// Final development fallback: direct comparison (remove this in production)
-	if hash == password {
-		log.Printf("⚠️  Using direct password comparison (INSECURE - for development only)")
-		return true
-	}
-	
-	log.Printf("❌ All password check methods failed")
-	return false
-}
-// isValidBcryptHash checks if the string is a properly formatted bcrypt hash
-func isValidBcryptHash(hash string) bool {
-	// Valid bcrypt hash should start with $2a$, $2b$, or $2y$
-	if !strings.HasPrefix(hash, "$2a$") && !strings.HasPrefix(hash, "$2b$") && !strings.HasPrefix(hash, "$2y$") {
+	if err != nil {
+		log.Printf("❌ BCrypt comparison failed: %v", err)
 		return false
 	}
 	
-	// Should have proper structure: $2a$cost$salt+hash
-	parts := strings.Split(hash, "$")
-	if len(parts) != 4 {
-		return false
-	}
-	
-	// Cost should be numeric and reasonable
-	cost := parts[2]
-	if len(cost) < 2 || len(cost) > 3 {
-		return false
-	}
-	
-	// The hash part should be 53 characters (22 chars salt + 31 chars hash)
-	if len(parts[3]) != 53 {
-		return false
-	}
-	
+	log.Printf("✅ BCrypt password check successful")
 	return true
 }
 
-// ResetAllPasswords - Temporary function to reset all user passwords to proper bcrypt hashes
-func ResetAllPasswords(dbPassword string) map[string]string {
-	users := map[string]string{
-		"admin@store.com": "admin123",
-		"manager":         "manager123",
-		"employee":        "employee123", 
-		"test":            "test123",
-		"maddy":           "maddy123",
-	}
+func EnhancedLoginCheck(identifier, password string) (*models.User, error) {
+	db := database.GetDB()
 	
-	hashes := make(map[string]string)
-	for username, password := range users {
-		hash, err := HashPassword(password)
-		if err != nil {
-			log.Printf("❌ Failed to hash password for %s: %v", username, err)
-			continue
+	log.Printf("🔍 Enhanced login check for identifier: %s", identifier)
+	
+	// Try multiple lookup methods
+	var user *models.User
+	var err error
+	
+	// Method 1: Try username first
+	user, err = models.GetUserByUsername(db, identifier)
+	if err == nil && user != nil {
+		log.Printf("✅ User found by username: %s, role: %s", user.Username, user.Role)
+		if CheckPasswordHash(password, user.Password) {
+			return user, nil
 		}
-		hashes[username] = hash
-		log.Printf("✅ Password for %s: %s -> %s", username, password, hash)
+		log.Printf("❌ Password mismatch for username: %s", identifier)
+		return nil, sql.ErrNoRows
+	} else {
+		log.Printf("⚠️ User not found by username: %s, trying email...", identifier)
 	}
 	
-	return hashes
+	// Method 2: Try email
+	user, err = models.GetUserByEmail(db, identifier)
+	if err == nil && user != nil {
+		log.Printf("✅ User found by email: %s, role: %s", user.Username, user.Role)
+		if CheckPasswordHash(password, user.Password) {
+			return user, nil
+		}
+		log.Printf("❌ Password mismatch for email: %s", identifier)
+		return nil, sql.ErrNoRows
+	} else {
+		log.Printf("⚠️ User not found by email: %s", identifier)
+	}
+	
+	// Method 3: Try case-insensitive search (for edge cases)
+	user, err = findUserByAnyIdentifier(db, identifier)
+	if err == nil && user != nil {
+		log.Printf("✅ User found by any identifier: %s, actual username: %s", identifier, user.Username)
+		if CheckPasswordHash(password, user.Password) {
+			return user, nil
+		}
+		log.Printf("❌ Password mismatch for any identifier: %s", identifier)
+		return nil, sql.ErrNoRows
+	}
+	
+	log.Printf("❌ All login methods failed for identifier: %s", identifier)
+	return nil, sql.ErrNoRows
+}
+
+// findUserByAnyIdentifier performs a broader search for the user
+func findUserByAnyIdentifier(db *sql.DB, identifier string) (*models.User, error) {
+	// Try case-insensitive username search
+	query := `SELECT id, username, email, password, role, is_active, last_login, created_at, updated_at 
+	          FROM users WHERE (LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)) AND is_active = true`
+	
+	var user models.User
+	var lastLogin sql.NullTime
+	
+	err := db.QueryRow(query, identifier, identifier).Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.Password,
+		&user.Role,
+		&user.IsActive,
+		&lastLogin,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+	
+	if err != nil {
+		return nil, err
+	}
+	
+	if lastLogin.Valid {
+		user.LastLogin = &lastLogin.Time
+	}
+	
+	return &user, nil
+}
+
+// ResetUserPassword ensures password changes are properly handled
+func ResetUserPassword(userID int, newPassword string) error {
+	db := database.GetDB()
+	
+	log.Printf("🔄 Resetting password for user ID: %d", userID)
+	
+	hashedPassword, err := HashPassword(newPassword)
+	if err != nil {
+		log.Printf("❌ Password hashing error: %v", err)
+		return err
+	}
+	
+	query := `UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?`
+	result, err := db.Exec(query, hashedPassword, userID)
+	if err != nil {
+		log.Printf("❌ Password update error: %v", err)
+		return err
+	}
+	
+	rowsAffected, _ := result.RowsAffected()
+	log.Printf("✅ Password reset successfully for user ID: %d, rows affected: %d", userID, rowsAffected)
+	
+	return nil
+}
+
+// UpdateUserPassword - Use this for updating passwords in user management
+func UpdateUserPassword(userID int, newPassword string) error {
+	return ResetUserPassword(userID, newPassword)
 }

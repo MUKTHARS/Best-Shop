@@ -62,25 +62,80 @@ const UsersScreen = () => {
   };
 
   const handleEditUser = (user) => {
-    setSelectedUser(user);
-    setEditUser({
-      role: user.role,
-      is_active: user.is_active
-    });
-    setShowEditModal(true);
-  };
+  setSelectedUser(user);
+  setEditUser({
+    email: user.email, 
+    role: user.role,
+    is_active: user.is_active,
+    password: ''
+  });
+  setShowEditModal(true);
+};
 
-  const handleUpdateUser = async () => {
-    try {
-      await userAPI.updateUser(selectedUser.id, editUser);
-      setShowEditModal(false);
-      setSelectedUser(null);
-      loadUsers();
-      Alert.alert('Success', 'User updated successfully');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update user: ' + error.message);
+const handleUpdateUser = async () => {
+  try {
+    // Create update data object with only provided fields
+    const updateData = {
+      role: editUser.role,
+      is_active: editUser.is_active
+    };
+    
+    // Only include email if it was modified and not empty
+    if (editUser.email && editUser.email.trim() !== '') {
+      updateData.email = editUser.email;
     }
-  };
+    
+    // Only include password if a new one was provided and not empty
+    if (editUser.password && editUser.password.trim() !== '') {
+      updateData.password = editUser.password;
+    }
+    
+    console.log('🔄 Updating user with data:', updateData);
+    
+    await userAPI.updateUser(selectedUser.id, updateData);
+    setShowEditModal(false);
+    setSelectedUser(null);
+    setEditUser({
+      role: 'employee',
+      is_active: true,
+      email: '',
+      password: ''
+    });
+    loadUsers();
+    Alert.alert('Success', 'User updated successfully');
+  } catch (error) {
+    console.log('❌ Update user error:', error);
+    Alert.alert('Error', 'Failed to update user: ' + error.message);
+  }
+};
+
+//   const handleUpdateUser = async () => {
+//   try {
+//     // Create update data object with only provided fields
+//     const updateData = {
+//       role: editUser.role,
+//       is_active: editUser.is_active
+//     };
+    
+//     // Only include email if it was modified
+//     if (editUser.email && editUser.email !== selectedUser.email) {
+//       updateData.email = editUser.email;
+//     }
+    
+//     // Only include password if a new one was provided
+//     if (editUser.password) {
+//       updateData.password = editUser.password;
+//     }
+    
+//     await userAPI.updateUser(selectedUser.id, updateData);
+//     setShowEditModal(false);
+//     setSelectedUser(null);
+//     loadUsers();
+//     Alert.alert('Success', 'User updated successfully');
+//   } catch (error) {
+//     Alert.alert('Error', 'Failed to update user: ' + error.message);
+//   }
+// };
 
   const handleDeleteUser = async (user) => {
     Alert.alert(
@@ -242,6 +297,29 @@ const UsersScreen = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Edit User: {selectedUser?.username}</Text>
+
+
+           
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        value={editUser.email || selectedUser?.email}
+        onChangeText={(text) => setEditUser({ ...editUser, email: text })}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoCorrect={false}
+      />
+    
+      <TextInput
+        style={styles.input}
+        placeholder="New Password (leave blank to keep current)"
+        placeholderTextColor="#999" 
+        value={editUser.password || ''}
+        onChangeText={(text) => setEditUser({ ...editUser, password: text })}
+        secureTextEntry
+        autoCapitalize="none"
+        autoCorrect={false}
+      />
             
             <View style={styles.roleContainer}>
               <Text style={styles.roleLabel}>Role:</Text>
