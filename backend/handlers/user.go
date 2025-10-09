@@ -7,6 +7,7 @@ import (
 	"stock-management/database"
 	"stock-management/models"
 	"stock-management/utils"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -101,4 +102,71 @@ func GetUsers(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, users)
+}
+
+func UpdateUser(c *gin.Context) {
+	userIDStr := c.Param("id")
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	var req struct {
+		Role     string `json:"role"`
+		IsActive *bool  `json:"is_active"`
+	}
+
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	db := database.GetDB()
+	
+	// Build update query dynamically based on provided fields
+	query := "UPDATE users SET "
+	var args []interface{}
+	
+	if req.Role != "" {
+		query += "role = ?, "
+		args = append(args, req.Role)
+	}
+	
+	if req.IsActive != nil {
+		query += "is_active = ?, "
+		args = append(args, *req.IsActive)
+	}
+	
+	// Remove trailing comma and space, add WHERE clause
+	query = query[:len(query)-2] + " WHERE id = ?"
+	args = append(args, userID)
+
+	_, err = db.Exec(query, args...)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully"})
+}
+
+func DeleteUser(c *gin.Context) {
+	userIDStr := c.Param("id")
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	db := database.GetDB()
+	
+	// Soft delete by setting is_active to false
+	_, err = db.Exec("UPDATE users SET is_active = false WHERE id = ?", userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
 }

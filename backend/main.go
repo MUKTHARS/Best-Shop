@@ -38,6 +38,8 @@ func main() {
 		auth.GET("/profile", handlers.GetProfile)
 		auth.GET("/users", handlers.GetUsers) 
 		auth.POST("/register", handlers.Register)
+		auth.PUT("/users/:id", handlers.UpdateUser)    
+		auth.DELETE("/users/:id", handlers.DeleteUser) 
 
 		// Category routes
 		auth.GET("/categories", handlers.GetCategories)

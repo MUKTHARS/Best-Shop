@@ -16,11 +16,17 @@ const UsersScreen = () => {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
   const [newUser, setNewUser] = useState({
     username: '',
     email: '',
     password: '',
     role: 'employee'
+  });
+  const [editUser, setEditUser] = useState({
+    role: 'employee',
+    is_active: true
   });
 
   useEffect(() => {
@@ -55,18 +61,78 @@ const UsersScreen = () => {
     }
   };
 
+  const handleEditUser = (user) => {
+    setSelectedUser(user);
+    setEditUser({
+      role: user.role,
+      is_active: user.is_active
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateUser = async () => {
+    try {
+      await userAPI.updateUser(selectedUser.id, editUser);
+      setShowEditModal(false);
+      setSelectedUser(null);
+      loadUsers();
+      Alert.alert('Success', 'User updated successfully');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update user: ' + error.message);
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    Alert.alert(
+      'Delete User',
+      `Are you sure you want to delete ${user.username}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await userAPI.deleteUser(user.id);
+              loadUsers();
+              Alert.alert('Success', 'User deleted successfully');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete user: ' + error.message);
+            }
+          }
+        },
+      ]
+    );
+  };
+
   const renderUserItem = ({ item }) => (
     <View style={styles.userCard}>
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{item.username}</Text>
         <Text style={styles.userEmail}>{item.email}</Text>
+        {/* <Text style={styles.userPassword}>Password: {item.password ? '••••••••' : 'Not set'}</Text> */}
+        <Text style={styles.userPassword}>Password: ••••••••</Text>
       </View>
-      <View style={[styles.roleBadge, 
-        { backgroundColor: 
-          item.role === 'admin' ? '#FF3B30' : 
-          item.role === 'manager' ? '#FF9500' : '#007AFF' 
-        }]}>
-        <Text style={styles.roleText}>{item.role}</Text>
+      <View style={styles.userActions}>
+        <View style={[styles.roleBadge, 
+          { backgroundColor: 
+            item.role === 'admin' ? '#FF3B30' : 
+            item.role === 'manager' ? '#FF9500' : '#007AFF' 
+          }]}>
+          <Text style={styles.roleText}>{item.role}</Text>
+        </View>
+        <TouchableOpacity 
+          style={[styles.actionButton, styles.editButton]}
+          onPress={() => handleEditUser(item)}
+        >
+          <Text style={styles.actionButtonText}>Edit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.actionButton, styles.deleteButton]}
+          onPress={() => handleDeleteUser(item)}
+        >
+          <Text style={styles.actionButtonText}>Delete</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -96,6 +162,7 @@ const UsersScreen = () => {
         showsVerticalScrollIndicator={false}
       />
 
+      {/* Add User Modal */}
       <Modal visible={showAddModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -104,7 +171,6 @@ const UsersScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="Username"
-              placeholderTextColor="#999"
               value={newUser.username}
               onChangeText={(text) => setNewUser({ ...newUser, username: text })}
               autoCapitalize="none"
@@ -114,7 +180,6 @@ const UsersScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="Email"
-              placeholderTextColor="#999"
               value={newUser.email}
               onChangeText={(text) => setNewUser({ ...newUser, email: text })}
               keyboardType="email-address"
@@ -125,7 +190,6 @@ const UsersScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="Password"
-              placeholderTextColor="#999"
               value={newUser.password}
               onChangeText={(text) => setNewUser({ ...newUser, password: text })}
               secureTextEntry
@@ -172,11 +236,77 @@ const UsersScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Edit User Modal */}
+      <Modal visible={showEditModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Edit User: {selectedUser?.username}</Text>
+            
+            <View style={styles.roleContainer}>
+              <Text style={styles.roleLabel}>Role:</Text>
+              {['employee', 'manager', 'admin'].map((role) => (
+                <TouchableOpacity
+                  key={role}
+                  style={[
+                    styles.roleOption,
+                    editUser.role === role && styles.roleOptionSelected
+                  ]}
+                  onPress={() => setEditUser({ ...editUser, role })}
+                >
+                  <Text style={[
+                    styles.roleOptionText,
+                    editUser.role === role && styles.roleOptionTextSelected
+                  ]}>
+                    {role}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.statusContainer}>
+              <Text style={styles.roleLabel}>Status:</Text>
+              <TouchableOpacity
+                style={[
+                  styles.statusOption,
+                  editUser.is_active && styles.statusOptionActive
+                ]}
+                onPress={() => setEditUser({ ...editUser, is_active: !editUser.is_active })}
+              >
+                <Text style={[
+                  styles.statusOptionText,
+                  editUser.is_active && styles.statusOptionTextActive
+                ]}>
+                  {editUser.is_active ? 'Active' : 'Inactive'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowEditModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={handleUpdateUser}
+              >
+                <Text style={styles.saveButtonText}>Update</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
 
+
 const styles = StyleSheet.create({
+  
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
@@ -325,6 +455,85 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+
+   userCard: {
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  userEmail: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  userPassword: {
+    fontSize: 12,
+    color: '#999',
+    fontStyle: 'italic',
+  },
+  userActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  editButton: {
+    backgroundColor: '#FFA500',
+  },
+  deleteButton: {
+    backgroundColor: '#FF3B30',
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  statusOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    marginLeft: 10,
+  },
+  statusOptionActive: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  statusOptionText: {
+    color: '#666',
+    fontWeight: '600',
+  },
+  statusOptionTextActive: {
+    color: '#fff',
   },
 });
 

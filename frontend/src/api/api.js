@@ -318,6 +318,9 @@ class StockAPI extends API {
   }
 }
 
+
+
+
 class UserAPI extends API {
   async getUsers() {
     return this.request({
@@ -325,6 +328,22 @@ class UserAPI extends API {
       url: '/users',
     });
   }
+
+  async updateUser(userId, userData) {
+    return this.request({
+      method: 'PUT',
+      url: `/users/${userId}`,
+      data: userData,
+    });
+  }
+
+  async deleteUser(userId) {
+    return this.request({
+      method: 'DELETE',
+      url: `/users/${userId}`,
+    });
+  }
+  
 }
 
 export const authAPI = new AuthAPI();
