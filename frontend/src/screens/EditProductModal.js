@@ -152,36 +152,46 @@ const EditProductModal = ({ product, onSave, onCancel }) => {
     }
   };
 
-  const handleSave = async () => {
+ const handleSave = async () => {
     if (!formData.item_id || !formData.item_name) {
-      Alert.alert('Error', 'Item ID and Item Name are required');
-      return;
+        Alert.alert('Error', 'Item ID and Item Name are required');
+        return;
     }
 
     let finalImageUrl = formData.image_url;
 
     // Upload new image if selected
     if (newImage) {
-      const uploadedImageUrl = await uploadImage();
-      if (uploadedImageUrl) {
-        finalImageUrl = uploadedImageUrl;
-      }
+        const uploadedImageUrl = await uploadImage();
+        if (uploadedImageUrl) {
+            finalImageUrl = uploadedImageUrl;
+        }
     }
 
+    // Convert IDs properly - handle empty strings and invalid values
     const updatedProduct = {
-      ...formData,
-      mrp: parseFloat(formData.mrp) || 0,
-      selling_price: parseFloat(formData.selling_price) || 0,
-      cost_price: parseFloat(formData.cost_price) || 0,
-      category_id: parseInt(formData.category_id) || null,
-      subcategory_id: parseInt(formData.subcategory_id) || null,
-      brand_id: parseInt(formData.brand_id) || null,
-      low_stock_threshold: parseInt(formData.low_stock_threshold) || 0,
-      image_url: finalImageUrl,
+        ...formData,
+        mrp: parseFloat(formData.mrp) || 0,
+        selling_price: parseFloat(formData.selling_price) || 0,
+        cost_price: parseFloat(formData.cost_price) || 0,
+        low_stock_threshold: parseInt(formData.low_stock_threshold) || 0,
+        image_url: finalImageUrl,
+        is_active: true // Always set to true when updating to prevent accidental deactivation
     };
 
+    // Handle foreign keys - only send if they have valid values
+    updatedProduct.category_id = formData.category_id ? parseInt(formData.category_id) : null;
+    updatedProduct.subcategory_id = formData.subcategory_id ? parseInt(formData.subcategory_id) : null;
+    updatedProduct.brand_id = formData.brand_id ? parseInt(formData.brand_id) : null;
+
+    // Remove any fields that might cause issues
+    delete updatedProduct.category_name;
+    delete updatedProduct.subcategory_name;
+    delete updatedProduct.brand_name;
+
+    console.log('🔄 Sending update with is_active:', updatedProduct.is_active);
     onSave(updatedProduct);
-  };
+};
 
   const removeImage = () => {
     setFormData({ ...formData, image_url: '' });

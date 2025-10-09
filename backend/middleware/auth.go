@@ -38,3 +38,50 @@ func AuthMiddleware() gin.HandlerFunc {
 	}
 }
 
+// RoleMiddleware checks if user has required role
+func RoleMiddleware(allowedRoles ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userRole := c.GetString("role")
+		
+		// Check if user role is in allowed roles
+		hasAccess := false
+		for _, role := range allowedRoles {
+			if userRole == role {
+				hasAccess = true
+				break
+			}
+		}
+
+		if !hasAccess {
+			log.Printf("❌ Access denied for role: %s, required: %v", userRole, allowedRoles)
+			c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+			c.Abort()
+			return
+		}
+
+		log.Printf("✅ Role access granted: %s for roles: %v", userRole, allowedRoles)
+		c.Next()
+	}
+}
+
+// ProductAccessMiddleware allows admin, manager, and employees with product access
+func ProductAccessMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userRole := c.GetString("role")
+		
+		// Admin and manager always have access
+		if userRole == "admin" || userRole == "manager" {
+			c.Next()
+			return
+		}
+		
+		// For employees, we need to check if they have product edit permissions
+		// This would require checking a permissions table in the database
+		// For now, we'll assume employees don't have access by default
+		// You can implement this later based on your business logic
+		
+		log.Printf("❌ Product access denied for role: %s", userRole)
+		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions for product operations"})
+		c.Abort()
+	}
+}

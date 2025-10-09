@@ -34,30 +34,37 @@ func main() {
 	auth := router.Group("/")
 	auth.Use(middleware.AuthMiddleware())
 	{
-		// User routes
+		// User routes - Admin only
 		auth.GET("/profile", handlers.GetProfile)
-		auth.GET("/users", handlers.GetUsers) 
-		auth.POST("/register", handlers.Register)
-		auth.PUT("/users/:id", handlers.UpdateUser)    
-		auth.DELETE("/users/:id", handlers.DeleteUser) 
 		auth.POST("/reset-password", handlers.ResetPassword)
-		// Category routes
-		auth.GET("/categories", handlers.GetCategories)
-		auth.POST("/categories", handlers.CreateCategory)
+		
+		// User management - Admin only
+		userManagement := auth.Group("/")
+		userManagement.Use(middleware.RoleMiddleware("admin"))
+		{
+			userManagement.GET("/users", handlers.GetUsers)
+			userManagement.POST("/register", handlers.Register)
+			userManagement.PUT("/users/:id", handlers.UpdateUser)
+			userManagement.DELETE("/users/:id", handlers.DeleteUser)
+		}
 
-		// Brand routes
-		auth.GET("/brands", handlers.GetBrands)
-		auth.POST("/brands", handlers.CreateBrand)
-
-		// Subcategory routes
-		auth.GET("/subcategories/category/:id", handlers.GetSubcategories)
-		auth.POST("/subcategories", handlers.CreateSubcategory)
-
-		// Product routes - Define specific routes first
-		auth.PUT("/products/:id", handlers.UpdateProduct)
-		auth.DELETE("/products/:id", handlers.DeleteProduct)
+		// Product routes - Read access for all authenticated users
 		auth.GET("/products", handlers.GetProducts)
-		auth.POST("/products", handlers.CreateProduct)
+		auth.GET("/categories", handlers.GetCategories)
+		auth.GET("/brands", handlers.GetBrands)
+		auth.GET("/subcategories/category/:id", handlers.GetSubcategories)
+		
+		// Product write operations - Admin and Manager only
+		productWrite := auth.Group("/")
+		productWrite.Use(middleware.RoleMiddleware("admin", "manager"))
+		{
+			productWrite.POST("/products", handlers.CreateProduct)
+			productWrite.PUT("/products/:id", handlers.UpdateProduct)
+			productWrite.DELETE("/products/:id", handlers.DeleteProduct)
+			productWrite.POST("/categories", handlers.CreateCategory)
+			productWrite.POST("/brands", handlers.CreateBrand)
+			productWrite.POST("/subcategories", handlers.CreateSubcategory)
+		}
 
 		// Stock routes
 		auth.GET("/stock-entries", handlers.GetStockEntries)
@@ -89,6 +96,7 @@ func main() {
 	log.Printf("🚀 Server running on %s", serverAddr)
 	log.Fatal(router.Run(serverAddr))
 }
+
 
 // package main
 

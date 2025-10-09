@@ -29,6 +29,7 @@ function AppNavigator() {
             <Stack.Screen name="StockEntry" component={StockEntryScreen} />
             <Stack.Screen name="StockPreview" component={StockPreviewScreen} />
             <Stack.Screen name="Products" component={ProductsScreen} />
+            {/* Only show Users screen for admin */}
             {user.role === 'admin' && (
               <Stack.Screen name="Users" component={UsersScreen} />
             )}
@@ -38,7 +39,6 @@ function AppNavigator() {
     </NavigationContainer>
   );
 }
-
 export default function App() {
   return (
     <AuthProvider>

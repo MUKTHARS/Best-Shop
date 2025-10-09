@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"stock-management/database"
@@ -87,85 +88,155 @@ func CreateProduct(c *gin.Context) {
 
 
 func UpdateProduct(c *gin.Context) {
-	productIDStr := c.Param("id")
-	productID, err := strconv.Atoi(productIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product ID"})
-		return
-	}
+    productIDStr := c.Param("id")
+    productID, err := strconv.Atoi(productIDStr)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product ID"})
+        return
+    }
 
-	// Use a flexible struct that can handle NULL values
-	var updateData struct {
-		ItemID           string  `json:"item_id"`
-		ItemName         string  `json:"item_name"`
-		CategoryID       *int    `json:"category_id"`       // Use pointer to handle NULL
-		SubcategoryID    *int    `json:"subcategory_id"`    // Use pointer to handle NULL  
-		BrandID          *int    `json:"brand_id"`          // Use pointer to handle NULL
-		Model            string  `json:"model"`
-		Color            string  `json:"color"`
-		Size             string  `json:"size"`
-		MRP              float64 `json:"mrp"`
-		SellingPrice     float64 `json:"selling_price"`
-		CostPrice        float64 `json:"cost_price"`
-		SKU              string  `json:"sku"`
-		Barcode          string  `json:"barcode"`
-		ImageURL         string  `json:"image_url"`
-		Description      string  `json:"description"`
-		LowStockThreshold int    `json:"low_stock_threshold"`
-	}
+    var req struct {
+        ItemID            string  `json:"item_id"`
+        ItemName          string  `json:"item_name"`
+        CategoryID        *int    `json:"category_id"`  
+        SubcategoryID     *int    `json:"subcategory_id"` 
+        BrandID           *int    `json:"brand_id"`      
+        Model             string  `json:"model"`
+        Color             string  `json:"color"`
+        Size              string  `json:"size"`
+        Mrp               float64 `json:"mrp"`
+        SellingPrice      float64 `json:"selling_price"`
+        CostPrice         float64 `json:"cost_price"`
+        Sku               string  `json:"sku"`
+        Barcode           string  `json:"barcode"`
+        Description       string  `json:"description"`
+        LowStockThreshold int     `json:"low_stock_threshold"`
+        IsActive          *bool   `json:"is_active"` // Change to pointer to handle false values properly
+    }
 
-	if err := c.BindJSON(&updateData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: " + err.Error()})
-		return
-	}
+    if err := c.BindJSON(&req); err != nil {
+        log.Printf("❌ Update product request bind error: %v", err)
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+        return
+    }
 
-	// Get the existing product first to preserve foreign key relationships
-	db := database.GetDB()
-	existingProduct, err := models.GetProductByID(db, productID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
-		return
-	}
+    db := database.GetDB()
 
-	// Create updated product with preserved foreign keys
-	updatedProduct := models.Product{
-		ID:               productID,
-		ItemID:           updateData.ItemID,
-		ItemName:         updateData.ItemName,
-		CategoryID:       existingProduct.CategoryID, // Preserve existing category
-		SubcategoryID:    existingProduct.SubcategoryID, // Preserve existing subcategory
-		BrandID:          existingProduct.BrandID, // Preserve existing brand
-		Model:            updateData.Model,
-		Color:            updateData.Color,
-		Size:             updateData.Size,
-		MRP:              updateData.MRP,
-		SellingPrice:     updateData.SellingPrice,
-		CostPrice:        updateData.CostPrice,
-		SKU:              updateData.SKU,
-		Barcode:          updateData.Barcode,
-		ImageURL:         updateData.ImageURL,
-		Description:      updateData.Description,
-		LowStockThreshold: updateData.LowStockThreshold,
-		IsActive:         existingProduct.IsActive,
-	}
+    // First, get the current product to preserve is_active if not provided
+    var currentIsActive bool
+    err = db.QueryRow("SELECT is_active FROM products WHERE id = ?", productID).Scan(&currentIsActive)
+    if err != nil {
+        log.Printf("❌ Error fetching current product: %v", err)
+        c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+        return
+    }
 
-	// Only update foreign keys if new values are provided
-	if updateData.CategoryID != nil {
-		updatedProduct.CategoryID = *updateData.CategoryID
-	}
-	if updateData.SubcategoryID != nil {
-		updatedProduct.SubcategoryID = *updateData.SubcategoryID
-	}
-	if updateData.BrandID != nil {
-		updatedProduct.BrandID = *updateData.BrandID
-	}
+    // Use provided is_active value or keep current one
+    isActive := currentIsActive
+    if req.IsActive != nil {
+        isActive = *req.IsActive
+    }
 
-	if err := models.UpdateProduct(db, &updatedProduct); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+    // First, verify that the brand_id exists in brands table if it's provided
+    if req.BrandID != nil && *req.BrandID > 0 {
+        var brandExists bool
+        err := db.QueryRow("SELECT COUNT(*) > 0 FROM brands WHERE id = ? AND is_active = true", *req.BrandID).Scan(&brandExists)
+        if err != nil {
+            log.Printf("❌ Brand verification error: %v", err)
+            c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid brand ID"})
+            return
+        }
+        if !brandExists {
+            log.Printf("❌ Brand ID does not exist: %d", *req.BrandID)
+            c.JSON(http.StatusBadRequest, gin.H{"error": "Brand ID does not exist"})
+            return
+        }
+    }
 
-	c.JSON(http.StatusOK, updatedProduct)
+    // Verify category_id exists if provided
+    if req.CategoryID != nil && *req.CategoryID > 0 {
+        var categoryExists bool
+        err := db.QueryRow("SELECT COUNT(*) > 0 FROM categories WHERE id = ? AND is_active = true", *req.CategoryID).Scan(&categoryExists)
+        if err != nil {
+            log.Printf("❌ Category verification error: %v", err)
+            c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid category ID"})
+            return
+        }
+        if !categoryExists {
+            log.Printf("❌ Category ID does not exist: %d", *req.CategoryID)
+            c.JSON(http.StatusBadRequest, gin.H{"error": "Category ID does not exist"})
+            return
+        }
+    }
+
+    // Verify subcategory_id exists if provided
+    if req.SubcategoryID != nil && *req.SubcategoryID > 0 {
+        var subcategoryExists bool
+        err := db.QueryRow("SELECT COUNT(*) > 0 FROM subcategories WHERE id = ? AND is_active = true", *req.SubcategoryID).Scan(&subcategoryExists)
+        if err != nil {
+            log.Printf("❌ Subcategory verification error: %v", err)
+            c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid subcategory ID"})
+            return
+        }
+        if !subcategoryExists {
+            log.Printf("❌ Subcategory ID does not exist: %d", *req.SubcategoryID)
+            c.JSON(http.StatusBadRequest, gin.H{"error": "Subcategory ID does not exist"})
+            return
+        }
+    }
+
+    // Build update query
+    query := `UPDATE products SET 
+        item_id = ?, item_name = ?, model = ?, color = ?, size = ?, 
+        mrp = ?, selling_price = ?, cost_price = ?, sku = ?, barcode = ?, 
+        description = ?, low_stock_threshold = ?, is_active = ?, updated_at = NOW()`
+
+    var args []interface{}
+    args = append(args, req.ItemID, req.ItemName, req.Model, req.Color, req.Size,
+        req.Mrp, req.SellingPrice, req.CostPrice, req.Sku, req.Barcode,
+        req.Description, req.LowStockThreshold, isActive) // Use the properly handled isActive value
+
+    // Handle nullable foreign keys - only set if they exist and are valid
+    if req.CategoryID != nil && *req.CategoryID > 0 {
+        query += ", category_id = ?"
+        args = append(args, *req.CategoryID)
+    } else {
+        query += ", category_id = NULL"
+    }
+
+    if req.SubcategoryID != nil && *req.SubcategoryID > 0 {
+        query += ", subcategory_id = ?"
+        args = append(args, *req.SubcategoryID)
+    } else {
+        query += ", subcategory_id = NULL"
+    }
+
+    if req.BrandID != nil && *req.BrandID > 0 {
+        query += ", brand_id = ?"
+        args = append(args, *req.BrandID)
+    } else {
+        query += ", brand_id = NULL"
+    }
+
+    query += " WHERE id = ?"
+    args = append(args, productID)
+
+    result, err := db.Exec(query, args...)
+    if err != nil {
+        log.Printf("❌ Product update error: %v", err)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    rowsAffected, _ := result.RowsAffected()
+    if rowsAffected == 0 {
+        log.Printf("❌ No product found with ID: %d", productID)
+        c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+        return
+    }
+
+    log.Printf("✅ Product updated successfully: ID %d, is_active: %t", productID, isActive)
+    c.JSON(http.StatusOK, gin.H{"message": "Product updated successfully"})
 }
 
 func DeleteProduct(c *gin.Context) {
