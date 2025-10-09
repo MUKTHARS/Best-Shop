@@ -3,12 +3,12 @@ import axios from 'axios';
 import { Platform } from 'react-native'; // Add this import
 
 // Use different URLs based on platform
-const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:8080' : 'http://localhost:8080';
+const API_BASE_URL = Platform.OS === 'android' ? 'http://192.168.43.41:8080' : 'http://localhost:8080';
 
 console.log('🔧 API Configuration:', {
   baseURL: API_BASE_URL,
   platform: Platform.OS,
-  androidNote: Platform.OS === 'android' ? 'Using 10.0.2.2 for Android emulator' : 'Using localhost'
+  androidNote: Platform.OS === 'android' ? 'Using 192.168.43.41 for Android emulator' : 'Using localhost'
 });
 
 class API {
@@ -210,6 +210,15 @@ class StockAPI extends API {
       data: category,
     });
   }
+
+  async createSubcategory(subcategoryData) {
+    return this.request({
+      method: 'POST',
+      url: '/subcategories',
+      data: subcategoryData,
+    });
+  }
+
 
   async getBrands() {
     return this.request({

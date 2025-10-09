@@ -43,7 +43,11 @@ func CreateSubcategory(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, subcategory)
+	// Return the created subcategory with 201 status
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "Subcategory created successfully",
+		"data": subcategory,
+	})
 }
 
 func GetProducts(c *gin.Context) {

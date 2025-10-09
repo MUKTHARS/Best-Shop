@@ -104,6 +104,7 @@ const UsersScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="Username"
+              placeholderTextColor="#999"
               value={newUser.username}
               onChangeText={(text) => setNewUser({ ...newUser, username: text })}
               autoCapitalize="none"
@@ -113,6 +114,7 @@ const UsersScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="Email"
+              placeholderTextColor="#999"
               value={newUser.email}
               onChangeText={(text) => setNewUser({ ...newUser, email: text })}
               keyboardType="email-address"
@@ -123,6 +125,7 @@ const UsersScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="Password"
+              placeholderTextColor="#999"
               value={newUser.password}
               onChangeText={(text) => setNewUser({ ...newUser, password: text })}
               secureTextEntry
@@ -262,6 +265,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
     fontSize: 16,
+    color: '#333333',
   },
   roleContainer: {
     flexDirection: 'row',

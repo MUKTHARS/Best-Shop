@@ -29,7 +29,7 @@ const ProductsScreen = () => {
   const [showEditModal, setShowEditModal] = useState(false); 
   const [editingProduct, setEditingProduct] = useState(null);
   // Use different URLs based on platform for image loading
-  const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:8080' : 'http://localhost:8080';
+  const API_BASE_URL = Platform.OS === 'android' ? 'http://192.168.43.41:8080' : 'http://localhost:8080';
 
   useEffect(() => {
     loadProducts();
@@ -288,6 +288,7 @@ const renderProductItem = ({ item }) => {
       <TextInput
         style={styles.searchInput}
         placeholder="Search products by name, ID, or model..."
+        placeholderTextColor="#999"
         value={searchQuery}
         onChangeText={setSearchQuery}
       />

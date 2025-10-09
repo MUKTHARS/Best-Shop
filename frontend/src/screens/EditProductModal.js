@@ -36,7 +36,7 @@ const EditProductModal = ({ product, onSave, onCancel }) => {
   });
   const [newImage, setNewImage] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
-  const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:8080' : 'http://localhost:8080';
+  const API_BASE_URL = Platform.OS === 'android' ? 'http://192.168.43.41:8080' : 'http://localhost:8080';
  const getFullImageUrl = (imagePath) => {
     if (!imagePath) return null;
     if (imagePath.startsWith('http')) return imagePath;
@@ -204,12 +204,14 @@ const EditProductModal = ({ product, onSave, onCancel }) => {
           <TextInput
             style={styles.input}
             placeholder="Item ID *"
+            placeholderTextColor="#999"
             value={formData.item_id}
             onChangeText={(text) => setFormData({ ...formData, item_id: text })}
           />
           <TextInput
             style={styles.input}
             placeholder="Item Name *"
+            placeholderTextColor="#999"
             value={formData.item_name}
             onChangeText={(text) => setFormData({ ...formData, item_name: text })}
           />
@@ -218,6 +220,7 @@ const EditProductModal = ({ product, onSave, onCancel }) => {
           <TextInput
             style={styles.input}
             placeholder="Category ID"
+            placeholderTextColor="#999"
             value={formData.category_id}
             onChangeText={(text) => setFormData({ ...formData, category_id: text })}
             keyboardType="number-pad"
@@ -225,6 +228,7 @@ const EditProductModal = ({ product, onSave, onCancel }) => {
           <TextInput
             style={styles.input}
             placeholder="Subcategory ID"
+            placeholderTextColor="#999"
             value={formData.subcategory_id}
             onChangeText={(text) => setFormData({ ...formData, subcategory_id: text })}
             keyboardType="number-pad"
@@ -232,6 +236,7 @@ const EditProductModal = ({ product, onSave, onCancel }) => {
           <TextInput
             style={styles.input}
             placeholder="Brand ID"
+            placeholderTextColor="#999"
             value={formData.brand_id}
             onChangeText={(text) => setFormData({ ...formData, brand_id: text })}
             keyboardType="number-pad"
@@ -241,18 +246,21 @@ const EditProductModal = ({ product, onSave, onCancel }) => {
           <TextInput
             style={styles.input}
             placeholder="Model"
+            placeholderTextColor="#999"
             value={formData.model}
             onChangeText={(text) => setFormData({ ...formData, model: text })}
           />
           <TextInput
             style={styles.input}
             placeholder="Color"
+            placeholderTextColor="#999"
             value={formData.color}
             onChangeText={(text) => setFormData({ ...formData, color: text })}
           />
           <TextInput
             style={styles.input}
             placeholder="Size"
+            placeholderTextColor="#999"
             value={formData.size}
             onChangeText={(text) => setFormData({ ...formData, size: text })}
           />
@@ -261,6 +269,7 @@ const EditProductModal = ({ product, onSave, onCancel }) => {
           <TextInput
             style={styles.input}
             placeholder="MRP"
+            placeholderTextColor="#999"
             value={formData.mrp}
             onChangeText={(text) => setFormData({ ...formData, mrp: text })}
             keyboardType="decimal-pad"
@@ -268,6 +277,7 @@ const EditProductModal = ({ product, onSave, onCancel }) => {
           <TextInput
             style={styles.input}
             placeholder="Selling Price"
+            placeholderTextColor="#999"
             value={formData.selling_price}
             onChangeText={(text) => setFormData({ ...formData, selling_price: text })}
             keyboardType="decimal-pad"
@@ -275,6 +285,7 @@ const EditProductModal = ({ product, onSave, onCancel }) => {
           <TextInput
             style={styles.input}
             placeholder="Cost Price"
+            placeholderTextColor="#999"
             value={formData.cost_price}
             onChangeText={(text) => setFormData({ ...formData, cost_price: text })}
             keyboardType="decimal-pad"
@@ -284,18 +295,21 @@ const EditProductModal = ({ product, onSave, onCancel }) => {
           <TextInput
             style={styles.input}
             placeholder="SKU"
+            placeholderTextColor="#999"
             value={formData.sku}
             onChangeText={(text) => setFormData({ ...formData, sku: text })}
           />
           <TextInput
             style={styles.input}
             placeholder="Barcode"
+            placeholderTextColor="#999"
             value={formData.barcode}
             onChangeText={(text) => setFormData({ ...formData, barcode: text })}
           />
           <TextInput
             style={styles.input}
             placeholder="Low Stock Threshold"
+            placeholderTextColor="#999"
             value={formData.low_stock_threshold}
             onChangeText={(text) => setFormData({ ...formData, low_stock_threshold: text })}
             keyboardType="number-pad"

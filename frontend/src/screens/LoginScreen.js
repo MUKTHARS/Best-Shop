@@ -21,7 +21,7 @@ const LoginScreen = ({ navigation }) => {
   const testConnection = async () => {
     try {
       console.log('🔍 Testing connection to backend...');
-      const response = await fetch('http://10.0.2.2:8080/login', { // Changed to 10.0.2.2 for Android
+      const response = await fetch('http://192.168.43.41:8080/login', { // Changed to 192.168.43.41 for Android
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -33,7 +33,7 @@ const LoginScreen = ({ navigation }) => {
     } catch (error) {
       console.log('❌ Connection test failed:', error.message);
       console.log('🔧 Debug info:', {
-        url: 'http://10.0.2.2:8080/login',
+        url: 'http://192.168.43.41:8080/login',
         errorType: error.name,
         message: error.message
       });
@@ -58,7 +58,7 @@ const LoginScreen = ({ navigation }) => {
       console.log('❌ Step 1 Failed: Cannot connect to server');
       console.log('🔧 Troubleshooting steps:');
       console.log('   1. Check if backend server is running on port 8080');
-      console.log('   2. Verify 10.0.2.2:8080 is accessible from Android emulator');
+      console.log('   2. Verify 192.168.43.41:8080 is accessible from Android emulator');
       console.log('   3. Check if any firewall is blocking the connection');
       console.log('   4. Ensure backend is not running on a different port');
       setIsLoading(false);
@@ -90,7 +90,8 @@ const LoginScreen = ({ navigation }) => {
         
         <TextInput
           style={styles.input}
-          placeholder="Username"  // Changed from email to username
+          placeholder="Username"
+          placeholderTextColor="#999"
           value={username}
           onChangeText={setUsername}
           autoCapitalize="none"
@@ -100,6 +101,7 @@ const LoginScreen = ({ navigation }) => {
         <TextInput
           style={styles.input}
           placeholder="Password"
+          placeholderTextColor="#999"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -155,6 +157,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
     fontSize: 16,
+    color: '#333333',
   },
   button: {
     backgroundColor: '#007AFF',

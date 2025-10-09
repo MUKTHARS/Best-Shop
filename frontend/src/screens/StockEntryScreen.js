@@ -166,6 +166,8 @@ const StockEntryScreen = ({ navigation }) => {
     }
   };
 
+
+  
   const handleAddBrand = async () => {
     if (!newBrand.trim()) return;
 
@@ -181,21 +183,39 @@ const StockEntryScreen = ({ navigation }) => {
   };
 
   const handleAddSubcategory = async () => {
-    if (!newSubcategory.trim() || !formData.categoryId) return;
+  if (!newSubcategory.trim() || !formData.categoryId) return;
 
-    try {
-      const subcategory = await stockAPI.createSubcategory({
-        name: newSubcategory,
-        category_id: parseInt(formData.categoryId)
-      });
-      setSubcategories([...subcategories, subcategory]);
-      setNewSubcategory('');
-      setShowSubcategoryModal(false);
-      setFormData({ ...formData, subcategoryId: subcategory.id.toString() });
-    } catch (error) {
-      Alert.alert('Error', 'Failed to add subcategory');
+  try {
+    const subcategoryData = {
+      name: newSubcategory,
+      category_id: parseInt(formData.categoryId)
+    };
+    
+    const response = await stockAPI.createSubcategory(subcategoryData);
+    
+    // 201 status means success - refresh the list regardless of response format
+    console.log('Subcategory created successfully');
+    
+    // Refresh subcategories list
+    const subs = await stockAPI.getSubcategories(formData.categoryId);
+    setSubcategories(subs);
+    setNewSubcategory('');
+    setShowSubcategoryModal(false);
+    
+    // Try to get the ID from different response formats
+    const subcategoryId = response.id || response.data?.id;
+    if (subcategoryId) {
+      setFormData({ ...formData, subcategoryId: subcategoryId.toString() });
     }
-  };
+    
+  } catch (error) {
+    console.log('Error creating subcategory:', error);
+    // Only show alert for actual errors, not for 201 responses
+    if (!error.message.includes('201')) {
+      Alert.alert('Error', 'Failed to add subcategory: ' + error.message);
+    }
+  }
+};
 
   const handlePreview = async () => {
     if (!formData.itemId || !formData.itemName || !formData.purchaseQuantity) {
@@ -229,6 +249,7 @@ const StockEntryScreen = ({ navigation }) => {
       <TextInput
         style={styles.input}
         placeholder="Item ID *"
+        placeholderTextColor="#999"
         value={formData.itemId}
         onChangeText={(text) => setFormData({ ...formData, itemId: text })}
       />
@@ -236,6 +257,7 @@ const StockEntryScreen = ({ navigation }) => {
       <TextInput
         style={styles.input}
         placeholder="Item Name *"
+        placeholderTextColor="#999"
         value={formData.itemName}
         onChangeText={(text) => setFormData({ ...formData, itemName: text })}
       />
@@ -278,6 +300,7 @@ const StockEntryScreen = ({ navigation }) => {
       <TextInput
         style={styles.input}
         placeholder="Model"
+        placeholderTextColor="#999"
         value={formData.model}
         onChangeText={(text) => setFormData({ ...formData, model: text })}
       />
@@ -285,6 +308,7 @@ const StockEntryScreen = ({ navigation }) => {
       <TextInput
         style={styles.input}
         placeholder="Color"
+        placeholderTextColor="#999"
         value={formData.color}
         onChangeText={(text) => setFormData({ ...formData, color: text })}
       />
@@ -292,6 +316,7 @@ const StockEntryScreen = ({ navigation }) => {
       <TextInput
         style={styles.input}
         placeholder="Size"
+        placeholderTextColor="#999"
         value={formData.size}
         onChangeText={(text) => setFormData({ ...formData, size: text })}
       />
@@ -300,6 +325,7 @@ const StockEntryScreen = ({ navigation }) => {
         <TextInput
           style={[styles.input, styles.halfInput]}
           placeholder="MRP"
+          placeholderTextColor="#999"
           value={formData.mrp}
           onChangeText={(text) => setFormData({ ...formData, mrp: text })}
           keyboardType="decimal-pad"
@@ -308,6 +334,7 @@ const StockEntryScreen = ({ navigation }) => {
         <TextInput
           style={[styles.input, styles.halfInput]}
           placeholder="Selling Price"
+          placeholderTextColor="#999"
           value={formData.sellingPrice}
           onChangeText={(text) => setFormData({ ...formData, sellingPrice: text })}
           keyboardType="decimal-pad"
@@ -318,6 +345,7 @@ const StockEntryScreen = ({ navigation }) => {
         <TextInput
           style={[styles.input, styles.halfInput]}
           placeholder="Purchase Price"
+          placeholderTextColor="#999"
           value={formData.purchasePrice}
           onChangeText={(text) => setFormData({ ...formData, purchasePrice: text })}
           keyboardType="decimal-pad"
@@ -326,6 +354,7 @@ const StockEntryScreen = ({ navigation }) => {
         <TextInput
           style={[styles.input, styles.halfInput]}
           placeholder="Purchase Quantity *"
+          placeholderTextColor="#999"
           value={formData.purchaseQuantity}
           onChangeText={(text) => setFormData({ ...formData, purchaseQuantity: text })}
           keyboardType="number-pad"
@@ -335,6 +364,7 @@ const StockEntryScreen = ({ navigation }) => {
       <TextInput
         style={styles.input}
         placeholder="Bill Number"
+        placeholderTextColor="#999"
         value={formData.billNumber}
         onChangeText={(text) => setFormData({ ...formData, billNumber: text })}
       />
@@ -342,6 +372,7 @@ const StockEntryScreen = ({ navigation }) => {
       <TextInput
         style={[styles.input, styles.textArea]}
         placeholder="Notes"
+        placeholderTextColor="#999"
         value={formData.notes}
         onChangeText={(text) => setFormData({ ...formData, notes: text })}
         multiline
@@ -389,6 +420,7 @@ const StockEntryScreen = ({ navigation }) => {
               <TextInput
                 style={styles.addNewInput}
                 placeholder="Add new category"
+                placeholderTextColor="#999"
                 value={newCategory}
                 onChangeText={setNewCategory}
               />
@@ -424,6 +456,7 @@ const StockEntryScreen = ({ navigation }) => {
               <TextInput
                 style={styles.addNewInput}
                 placeholder="Add new brand"
+                placeholderTextColor="#999"
                 value={newBrand}
                 onChangeText={setNewBrand}
               />
@@ -459,6 +492,7 @@ const StockEntryScreen = ({ navigation }) => {
               <TextInput
                 style={styles.addNewInput}
                 placeholder="Add new subcategory"
+                placeholderTextColor="#999"
                 value={newSubcategory}
                 onChangeText={setNewSubcategory}
               />
@@ -500,6 +534,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
     fontSize: 16,
+    color: '#333333',
   },
   selector: {
     justifyContent: 'center',
