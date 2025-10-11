@@ -232,3 +232,76 @@ INSERT INTO suppliers (name, contact_person, email, phone, address) VALUES
 ('ABC Distributors', 'John Doe', 'john@abcdist.com', '+91-9876543210', '123 Business Park, Mumbai'),
 ('XYZ Imports', 'Jane Smith', 'jane@xyzimports.com', '+91-9876543211', '456 Trade Center, Delhi'),
 ('Local Wholesale', 'Raj Kumar', 'raj@localwhole.com', '+91-9876543212', '789 Market Street, Chennai');
+
+
+-- Product variants table for multiple sizes, genders, etc.
+CREATE TABLE product_variants (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    gender ENUM('male', 'female', 'kids', 'unisex') DEFAULT 'unisex',
+    size VARCHAR(50) NOT NULL,
+    color VARCHAR(50),
+    mrp DECIMAL(10,2),
+    selling_price DECIMAL(10,2),
+    cost_price DECIMAL(10,2),
+    sku VARCHAR(100) UNIQUE,
+    barcode VARCHAR(100),
+    current_stock INT DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    INDEX idx_product_id (product_id),
+    INDEX idx_sku (sku)
+);
+
+-- Update the products table to remove variant-specific fields
+ALTER TABLE products 
+DROP COLUMN color,
+DROP COLUMN size,
+DROP COLUMN mrp,
+DROP COLUMN selling_price,
+DROP COLUMN cost_price,
+DROP COLUMN sku,
+DROP COLUMN barcode,
+DROP COLUMN image_url;
+
+-- Add image_url to product_variants if needed
+ALTER TABLE product_variants ADD COLUMN image_url VARCHAR(500);
+
+-- Update stock_entries to reference product_variants instead of products
+ALTER TABLE stock_entries 
+ADD COLUMN product_variant_id INT,
+ADD FOREIGN KEY (product_variant_id) REFERENCES product_variants(id) ON DELETE CASCADE;
+
+-- Update sale_items to reference product_variants
+ALTER TABLE sale_items 
+ADD COLUMN product_variant_id INT,
+ADD FOREIGN KEY (product_variant_id) REFERENCES product_variants(id) ON DELETE CASCADE;
+
+UPDATE users SET password = 'admin123' WHERE username = 'admin';
+UPDATE users SET password = 'manager123' WHERE username = 'manager'; 
+UPDATE users SET password = 'employee123' WHERE username = 'employee';
+
+-- Or recreate users with plain text passwords
+DROP TABLE IF EXISTS users;
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL, -- Store plain text
+    role ENUM('admin', 'manager', 'employee') NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    last_login TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Insert users with plain text passwords
+INSERT INTO users (username, email, password, role) VALUES 
+('admin', 'admin@store.com', 'admin123', 'admin'),
+('manager', 'manager@store.com', 'manager123', 'manager'),
+('employee', 'employee@store.com', 'employee123', 'employee');
+
+ALTER TABLE product_variants ADD COLUMN image_url VARCHAR(500);
+ALTER TABLE products ADD COLUMN image_url VARCHAR(500);

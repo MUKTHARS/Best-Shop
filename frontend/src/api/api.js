@@ -1,14 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import { Platform } from 'react-native'; // Add this import
+import { Platform } from 'react-native';
 
 // Use different URLs based on platform
-const API_BASE_URL = Platform.OS === 'android' ? 'http://10.150.254.234:8080' : 'http://10.150.254.234:8080';
+const API_BASE_URL = Platform.OS === 'android' ? 'http://10.150.253.4:8080' : 'http://10.150.253.4:8080';
 
 console.log('🔧 API Configuration:', {
   baseURL: API_BASE_URL,
   platform: Platform.OS,
-  androidNote: Platform.OS === 'android' ? 'Using 10.150.254.234 for Android emulator' : 'Using localhost'
+  androidNote: Platform.OS === 'android' ? 'Using 10.150.253.4 for Android emulator' : 'Using localhost'
 });
 
 class API {
@@ -341,6 +341,14 @@ class UserAPI extends API {
     return this.request({
       method: 'DELETE',
       url: `/users/${userId}`,
+    });
+  }
+
+   async createProduct(productData) {
+    return this.request({
+      method: 'POST',
+      url: '/products',
+      data: productData,
     });
   }
   

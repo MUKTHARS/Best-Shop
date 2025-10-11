@@ -49,6 +49,7 @@ const DashboardScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      
       <View style={styles.header}>
         <View>
           <Text style={styles.welcome}>Welcome, {user?.username}</Text>

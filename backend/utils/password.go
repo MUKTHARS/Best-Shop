@@ -2,29 +2,45 @@ package utils
 
 import (
 	"log"
-	"golang.org/x/crypto/bcrypt"
+	// "golang.org/x/crypto/bcrypt"
 	"database/sql"
 	"stock-management/database"
 	"stock-management/models"
 )
 
 func HashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	return string(bytes), err
+    return password, nil // Return plain text
 }
 
 func CheckPasswordHash(password, hash string) bool {
-	log.Printf("🔐 Password check - Input: %s, Hash: %s", password, hash)
-	
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	if err != nil {
-		log.Printf("❌ BCrypt comparison failed: %v", err)
-		return false
-	}
-	
-	log.Printf("✅ BCrypt password check successful")
-	return true
+    log.Printf("🔐 Password check - Input: %s, Stored: %s", password, hash)
+    
+    // Direct string comparison
+    if password == hash {
+        log.Printf("✅ Password check successful")
+        return true
+    }
+    
+    log.Printf("❌ Password mismatch")
+    return false
 }
+// func HashPassword(password string) (string, error) {
+// 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+// 	return string(bytes), err
+// }
+
+// func CheckPasswordHash(password, hash string) bool {
+// 	log.Printf("🔐 Password check - Input: %s, Hash: %s", password, hash)
+	
+// 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+// 	if err != nil {
+// 		log.Printf("❌ BCrypt comparison failed: %v", err)
+// 		return false
+// 	}
+	
+// 	log.Printf("✅ BCrypt password check successful")
+// 	return true
+// }
 
 func EnhancedLoginCheck(identifier, password string) (*models.User, error) {
 	db := database.GetDB()

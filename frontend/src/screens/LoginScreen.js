@@ -7,10 +7,11 @@ import {
   StyleSheet,
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Alert,
+  Image
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { authAPI } from '../api/api';
 
 const LoginScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
@@ -21,28 +22,40 @@ const LoginScreen = ({ navigation }) => {
   const testConnection = async () => {
     try {
       console.log('🔍 Testing connection to backend...');
-      const response = await fetch('http://10.150.254.234:8080/login', { // Changed to 10.150.254.234 for Android
-        method: 'POST',
+      const baseURL = 'http://10.150.253.4:8080';
+      console.log('🌐 Testing connection to:', baseURL);
+      
+      const response = await fetch(`${baseURL}/`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username: 'test', password: 'test' }),
+        timeout: 5000,
       });
-      console.log('🔍 Connection test response status:', response.status);
-      return response.status !== 404;
+      
+      console.log('🔍 Health check response status:', response.status);
+      
+      if (response.status === 200) {
+        const responseData = await response.json();
+        console.log('✅ Server is reachable:', responseData);
+        return true;
+      } else {
+        console.log('❌ Server returned non-200 status:', response.status);
+        return false;
+      }
     } catch (error) {
       console.log('❌ Connection test failed:', error.message);
-      console.log('🔧 Debug info:', {
-        url: 'http://10.150.254.234:8080/login',
-        errorType: error.name,
-        message: error.message
-      });
+      Alert.alert(
+        'Connection Error', 
+        `Cannot connect to server: ${error.message}\n\nPlease ensure:\n• Backend server is running\n• Correct IP address: 10.150.253.4:8080\n• Network connection is stable`
+      );
       return false;
     }
   };
 
   const handleLogin = async () => {
     if (!username || !password) {
+      Alert.alert('Validation Error', 'Please enter both username and password');
       console.log('❌ Login validation failed: Missing username or password');
       return;
     }
@@ -50,32 +63,35 @@ const LoginScreen = ({ navigation }) => {
     console.log('🔐 Starting login process for user:', username);
     setIsLoading(true);
 
-    // Test connection first
-    console.log('🔄 Step 1: Testing server connection...');
-    const isConnected = await testConnection();
-    
-    if (!isConnected) {
-      console.log('❌ Step 1 Failed: Cannot connect to server');
-      console.log('🔧 Troubleshooting steps:');
-      console.log('   1. Check if backend server is running on port 8080');
-      console.log('   2. Verify 10.150.254.234:8080 is accessible from Android emulator');
-      console.log('   3. Check if any firewall is blocking the connection');
-      console.log('   4. Ensure backend is not running on a different port');
+    try {
+      // Test connection first
+      console.log('🔄 Step 1: Testing server connection...');
+      const isConnected = await testConnection();
+      
+      if (!isConnected) {
+        console.log('❌ Step 1 Failed: Cannot connect to server');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('✅ Step 1 Passed: Server connection successful');
+      console.log('🔄 Step 2: Attempting login...');
+
+      const result = await login(username, password);
+      
+      if (result.success) {
+        console.log('✅ Step 2 Passed: Login successful');
+        console.log('👤 User authenticated:', result.user.username);
+        // Navigation will happen automatically via AuthContext
+      } else {
+        console.log('❌ Step 2 Failed: Login failed -', result.error);
+        Alert.alert('Login Failed', result.error || 'Invalid username or password');
+      }
+    } catch (error) {
+      console.log('❌ Login process error:', error.message);
+      Alert.alert('Login Error', error.message || 'An unexpected error occurred');
+    } finally {
       setIsLoading(false);
-      return;
-    }
-
-    console.log('✅ Step 1 Passed: Server connection successful');
-    console.log('🔄 Step 2: Attempting login...');
-
-    const result = await login(username, password);
-    setIsLoading(false);
-
-    if (!result.success) {
-      console.log('❌ Step 2 Failed: Login failed -', result.error);
-      console.log('🔧 Login details:', { username, error: result.error });
-    } else {
-      console.log('✅ Step 2 Passed: Login successful');
     }
   };
 
@@ -85,6 +101,11 @@ const LoginScreen = ({ navigation }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
+        <Image
+  source={require('../assets/images/logo.png')}
+  style={styles.logo}
+/>
+
         <Text style={styles.title}>Stock Management</Text>
         <Text style={styles.subtitle}>Sign in to continue</Text>
         
@@ -96,6 +117,7 @@ const LoginScreen = ({ navigation }) => {
           onChangeText={setUsername}
           autoCapitalize="none"
           autoCorrect={false}
+          editable={!isLoading}
         />
         
         <TextInput
@@ -107,8 +129,9 @@ const LoginScreen = ({ navigation }) => {
           secureTextEntry
           autoCapitalize="none"
           autoCorrect={false}
+          editable={!isLoading}
         />
-        
+
         <TouchableOpacity 
           style={[styles.button, isLoading && styles.buttonDisabled]} 
           onPress={handleLogin}
@@ -120,7 +143,7 @@ const LoginScreen = ({ navigation }) => {
             <Text style={styles.buttonText}>Sign In</Text>
           )}
         </TouchableOpacity>
-        
+
       </View>
     </KeyboardAvoidingView>
   );
@@ -174,18 +197,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  demoText: {
+  debugInfo: {
     textAlign: 'center',
     marginTop: 20,
-    color: '#666',
+    color: '#888',
+    fontSize: 12,
     fontStyle: 'italic',
   },
-  debugText: {
-    textAlign: 'center',
-    marginTop: 10,
-    color: '#999',
-    fontSize: 12,
-  },
+  logo: {
+  width: 120,
+  height: 120,
+  resizeMode: 'contain',
+  alignSelf: 'center',
+  marginBottom: 20,
+},
+
 });
 
 export default LoginScreen;

@@ -30,11 +30,8 @@ const ProductsScreen = () => {
   const [showEditModal, setShowEditModal] = useState(false); 
   const [editingProduct, setEditingProduct] = useState(null);
   
-  // Add this line - Check if user can edit/delete products
   const canEditProducts = user?.role === 'admin' || user?.role === 'manager';
-  
-  // Use different URLs based on platform for image loading
-  const API_BASE_URL = Platform.OS === 'android' ? 'http://10.150.254.234:8080' : 'http://10.150.254.234:8080';
+  const API_BASE_URL = Platform.OS === 'android' ? 'http://10.150.253.4:8080' : 'http://10.150.253.4:8080';
 
   useEffect(() => {
     loadProducts();
@@ -54,7 +51,6 @@ const ProductsScreen = () => {
   }, [searchQuery, products]);
 
   const handleEditProduct = (product) => {
-    // Add access check
     if (!canEditProducts) {
       Alert.alert('Access Denied', 'You do not have permission to edit products');
       return;
@@ -70,15 +66,14 @@ const ProductsScreen = () => {
       await stockAPI.updateProduct(editingProduct.id, updatedProduct);
       setShowEditModal(false);
       setEditingProduct(null);
-      loadProducts(); // Refresh the list
+      loadProducts();
       Alert.alert('Success', 'Product updated successfully');
     } catch (error) {
-      console.log('Error', 'Failed to update product: ' + error.message);
+      Alert.alert('Error', 'Failed to update product: ' + error.message);
     }
   };
 
   const handleDeleteProduct = async (productId) => {
-    // Add access check
     if (!canEditProducts) {
       Alert.alert('Access Denied', 'You do not have permission to delete products');
       return;
@@ -96,7 +91,7 @@ const ProductsScreen = () => {
             try {
               await stockAPI.deleteProduct(productId);
               setShowDetailsModal(false);
-              loadProducts(); // Refresh the list
+              loadProducts();
               Alert.alert('Success', 'Product deleted successfully');
             } catch (error) {
               Alert.alert('Error', 'Failed to delete product: ' + error.message);
@@ -107,9 +102,7 @@ const ProductsScreen = () => {
     );
   };
 
-  // MODIFY THIS FUNCTION - Update the role check
   const renderModalActions = () => {
-    // Change from 'admin' to 'admin' or 'manager'
     if (!canEditProducts) return null;
     
     return (
@@ -153,27 +146,15 @@ const ProductsScreen = () => {
     setShowDetailsModal(true);
   };
 
-  // Function to get full image URL
   const getFullImageUrl = (imagePath) => {
     if (!imagePath) return null;
-    
-    // If it's already a full URL, return as is
-    if (imagePath.startsWith('http')) {
-      return imagePath;
-    }
-    
-    // If it starts with /uploads, prepend the base URL
-    if (imagePath.startsWith('/uploads')) {
-      return `${API_BASE_URL}${imagePath}`;
-    }
-    
-    // If it's just a filename, construct the full path
+    if (imagePath.startsWith('http')) return imagePath;
+    if (imagePath.startsWith('/uploads')) return `${API_BASE_URL}${imagePath}`;
     return `${API_BASE_URL}/uploads/${imagePath}`;
   };
 
-  // Move renderDetailRow outside of the component return to avoid conditional hook calls
   const renderDetailRow = (label, value) => {
-    if (!value) return null;
+    if (!value && value !== 0) return null;
     return (
       <View style={styles.detailRow}>
         <Text style={styles.detailLabel}>{label}:</Text>
@@ -182,120 +163,169 @@ const ProductsScreen = () => {
     );
   };
 
+ const renderVariantItem = ({ item, index }) => {
+  const variantImageUrl = item.image_url ? getFullImageUrl(item.image_url) : null;
+
+  return (
+    <View style={styles.variantCard}>
+      <Text style={styles.variantTitle}>
+        Variant {index + 1}: {item.gender} - {item.size} {item.color ? `- ${item.color}` : ''}
+      </Text>
+      
+      {variantImageUrl && (
+        <View style={styles.variantImagePreview}>
+          <Image
+            source={{ uri: variantImageUrl }}
+            style={styles.variantThumbnail}
+            resizeMode="cover"
+          />
+        </View>
+      )}
+      
+      <View style={styles.variantDetails}>
+        {renderDetailRow('Current Stock', item.current_stock)}
+        {renderDetailRow('Cost Price', item.cost_price ? `₹${item.cost_price}` : null)}
+        {renderDetailRow('Selling Price', item.selling_price ? `₹${item.selling_price}` : null)}
+        {renderDetailRow('MRP', item.mrp ? `₹${item.mrp}` : null)}
+        {renderDetailRow('SKU', item.sku)}
+        {renderDetailRow('Barcode', item.barcode)}
+      </View>
+    </View>
+  );
+};
+
   const renderProductDetails = () => {
-    if (!selectedProduct) return null;
+  if (!selectedProduct) return null;
 
-    const fullImageUrl = getFullImageUrl(selectedProduct.image_url);
+  // Get all unique images from variants
+  const variantImages = selectedProduct.variants 
+    ? selectedProduct.variants.filter(v => v.image_url).map(v => ({
+        image_url: v.image_url,
+        label: `${v.gender} - ${v.size} ${v.color ? `- ${v.color}` : ''}`
+      }))
+    : [];
 
-    return (
-      <>
+  return (
+    <>
+      {/* Product Images Section */}
+      {variantImages.length > 0 && (
         <View style={styles.detailSection}>
-          <Text style={styles.sectionTitle}>Basic Information</Text>
-          {renderDetailRow('Item ID', selectedProduct.item_id)}
-          {renderDetailRow('Item Name', selectedProduct.item_name)}
-          {renderDetailRow('Category', selectedProduct.category_name)}
-          {renderDetailRow('Subcategory', selectedProduct.subcategory_name)}
-          {renderDetailRow('Brand', selectedProduct.brand_name)}
-        </View>
-
-        <View style={styles.detailSection}>
-          <Text style={styles.sectionTitle}>Product Specifications</Text>
-          {renderDetailRow('Model', selectedProduct.model)}
-          {renderDetailRow('Color', selectedProduct.color)}
-          {renderDetailRow('Size', selectedProduct.size)}
-          {renderDetailRow('SKU', selectedProduct.sku)}
-          {renderDetailRow('Barcode', selectedProduct.barcode)}
-        </View>
-
-        <View style={styles.detailSection}>
-          <Text style={styles.sectionTitle}>Pricing Information</Text>
-          {renderDetailRow('Cost Price', selectedProduct.cost_price ? `₹${selectedProduct.cost_price}` : null)}
-          {renderDetailRow('MRP', selectedProduct.mrp ? `₹${selectedProduct.mrp}` : null)}
-          {renderDetailRow('Selling Price', selectedProduct.selling_price ? `₹${selectedProduct.selling_price}` : null)}
-        </View>
-
-        {fullImageUrl && (
-          <View style={styles.detailSection}>
-            <Text style={styles.sectionTitle}>Product Image</Text>
-            <View style={styles.imageContainer}>
-              <Image 
-                source={{ uri: fullImageUrl }} 
-                style={styles.productImage}
-                resizeMode="contain"
-                onError={(error) => {
-                  console.log('Image loading error:', error);
-                  console.log('Failed to load image from:', fullImageUrl);
-                }}
-                onLoad={() => console.log('Image loaded successfully:', fullImageUrl)}
-              />
+          <Text style={styles.sectionTitle}>Product Images</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.imagesContainer}>
+              {variantImages.map((variant, index) => (
+                <View key={index} style={styles.variantImageContainer}>
+                  <Image 
+                    source={{ uri: getFullImageUrl(variant.image_url) }} 
+                    style={styles.variantImage}
+                    resizeMode="cover"
+                  />
+                  <Text style={styles.variantImageLabel}>{variant.label}</Text>
+                </View>
+              ))}
             </View>
-          </View>
-        )}
-
-        <View style={styles.detailSection}>
-          <Text style={styles.sectionTitle}>Additional Information</Text>
-          {renderDetailRow('Description', selectedProduct.description)}
-          {renderDetailRow('Low Stock Threshold', selectedProduct.low_stock_threshold ? selectedProduct.low_stock_threshold.toString() : null)}
-          {renderDetailRow('Status', selectedProduct.is_active ? 'Active' : 'Inactive')}
-          {renderDetailRow('Created', selectedProduct.created_at ? new Date(selectedProduct.created_at).toLocaleDateString() : null)}
-          {renderDetailRow('Last Updated', selectedProduct.updated_at ? new Date(selectedProduct.updated_at).toLocaleDateString() : null)}
+          </ScrollView>
         </View>
-      </>
-    );
-  };
+      )}
+
+      <View style={styles.detailSection}>
+        <Text style={styles.sectionTitle}>Basic Information</Text>
+        {renderDetailRow('Item ID', selectedProduct.item_id)}
+        {renderDetailRow('Item Name', selectedProduct.item_name)}
+        {renderDetailRow('Model', selectedProduct.model)}
+        {renderDetailRow('Description', selectedProduct.description)}
+        {renderDetailRow('Low Stock Threshold', selectedProduct.low_stock_threshold)}
+      </View>
+
+      {selectedProduct.variants && selectedProduct.variants.length > 0 && (
+        <View style={styles.detailSection}>
+          <Text style={styles.sectionTitle}>Product Variants ({selectedProduct.variants.length})</Text>
+          <FlatList
+            data={selectedProduct.variants}
+            renderItem={renderVariantItem}
+            keyExtractor={(item, index) => index.toString()}
+            scrollEnabled={false}
+          />
+        </View>
+      )}
+
+      <View style={styles.detailSection}>
+        <Text style={styles.sectionTitle}>Additional Information</Text>
+        {renderDetailRow('Status', selectedProduct.is_active ? 'Active' : 'Inactive')}
+        {renderDetailRow('Created', selectedProduct.created_at ? new Date(selectedProduct.created_at).toLocaleDateString() : null)}
+        {renderDetailRow('Last Updated', selectedProduct.updated_at ? new Date(selectedProduct.updated_at).toLocaleDateString() : null)}
+      </View>
+    </>
+  );
+};
 
   const renderProductItem = ({ item }) => {
-    const fullImageUrl = getFullImageUrl(item.image_url);
+  // Get the first variant with an image or use the first variant
+  const firstVariant = item.variants && item.variants.length > 0 ? item.variants[0] : null;
+  
+  // Try to get image from variants first, then from product
+  let imageUrl = null;
+  if (firstVariant && firstVariant.image_url) {
+    imageUrl = getFullImageUrl(firstVariant.image_url);
+  } else if (item.image_url) {
+    imageUrl = getFullImageUrl(item.image_url);
+  }
 
-    return (
-      <TouchableOpacity 
-        style={styles.productCard} 
-        onPress={() => handleProductPress(item)}
-      >
-        {fullImageUrl && (
-          <View style={styles.imagePreviewContainer}>
-            <Image
-              source={{ uri: fullImageUrl }}
-              style={styles.productImagePreview}
-              resizeMode="cover"
-              onError={(error) =>
-                console.log("Preview image loading error:", error)
-              }
-            />
+  return (
+    <TouchableOpacity 
+      style={styles.productCard} 
+      onPress={() => handleProductPress(item)}
+    >
+      {imageUrl ? (
+        <View style={styles.imagePreviewContainer}>
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.productImagePreview}
+            resizeMode="cover"
+            onError={(error) => console.log("Image loading error:", error)}
+          />
+        </View>
+      ) : (
+        <View style={[styles.imagePreviewContainer, styles.placeholderImage]}>
+          <Text style={styles.placeholderText}>No Image</Text>
+        </View>
+      )}
+      
+      <View style={styles.productContent}>
+        <Text style={styles.productName} numberOfLines={1}>
+          {item.item_name}
+        </Text>
+        <Text style={styles.productId}>{item.item_id}</Text>
+        
+        {item.model && (
+          <Text style={styles.detailText} numberOfLines={1}>
+            {item.model}
+          </Text>
+        )}
+        
+        {item.variants && item.variants.length > 0 && (
+          <View style={styles.variantsSummary}>
+            <Text style={styles.variantsText}>
+              {item.variants.length} variant(s)
+            </Text>
+            <Text style={styles.variantsDetails}>
+              Sizes: {[...new Set(item.variants.map(v => v.size))].join(', ')}
+            </Text>
           </View>
         )}
         
-        <View style={styles.productContent}>
-          <Text style={styles.productName} numberOfLines={1}>
-            {item.item_name}
-          </Text>
-          <Text style={styles.productId}>{item.item_id}</Text>
-          
-          {item.model && (
-            <Text style={styles.detailText} numberOfLines={1}>
-              {item.model}
+        <View style={styles.priceContainer}>
+          {item.variants && item.variants.length > 0 && (
+            <Text style={styles.priceRange}>
+              ₹{Math.min(...item.variants.map(v => v.selling_price || 0))} - 
+              ₹{Math.max(...item.variants.map(v => v.selling_price || 0))}
             </Text>
           )}
-          
-          <View style={styles.priceContainer}>
-            {item.selling_price > 0 && (
-              <Text style={styles.sellingPriceText}>
-                ₹{item.selling_price}
-              </Text>
-            )}
-          </View>
-          
-          {/* ADD: Role-based access indicator */}
-          {!canEditProducts && (
-            <View > 
-              {/* style={styles.readOnlyBadge} */}
-              {/* <Text style={styles.readOnlyText}>View Only</Text> */}
-            </View>
-          )}
         </View>
-      </TouchableOpacity>
-    );
-  };
+      </View>
+    </TouchableOpacity>
+  );
+};
 
   if (isLoading) {
     return (
@@ -307,11 +337,9 @@ const ProductsScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* ADD: User role indicator */}
       <View style={styles.roleHeader}>
         <Text style={styles.roleText}>
           Logged in as: {user?.role} 
-          {!canEditProducts}
         </Text>
       </View>
       
@@ -343,7 +371,6 @@ const ProductsScreen = () => {
         }
       />
 
-      {/* Product Details Modal */}
       <Modal
         visible={showDetailsModal}
         animationType="slide"
@@ -372,7 +399,6 @@ const ProductsScreen = () => {
         </View>
       </Modal>
       
-      {/* Edit Product Modal */}
       <Modal
         visible={showEditModal}
         animationType="slide"
@@ -395,7 +421,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     padding: 15,
   },
-  // ADD: Role header styles
   roleHeader: {
     backgroundColor: '#007AFF',
     padding: 10,
@@ -407,20 +432,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     fontSize: 14,
-  },
-  // ADD: Read-only badge styles
-  readOnlyBadge: {
-    backgroundColor: '#6c757d',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    alignSelf: 'flex-start',
-    marginTop: 4,
-  },
-  readOnlyText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: 'bold',
   },
   searchInput: {
     backgroundColor: '#fff',
@@ -473,7 +484,7 @@ const styles = StyleSheet.create({
   priceContainer: {
     marginTop: 4,
   },
-  sellingPriceText: {
+  priceRange: {
     fontSize: 14,
     color: '#007AFF',
     fontWeight: 'bold',
@@ -492,7 +503,6 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
-  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -547,6 +557,17 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
     paddingBottom: 5,
   },
+  variantImagePreview: {
+  marginBottom: 8,
+  alignItems: 'center',
+},
+variantThumbnail: {
+  width: 80,
+  height: 80,
+  borderRadius: 6,
+  borderWidth: 1,
+  borderColor: '#e0e0e0',
+},
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -565,25 +586,6 @@ const styles = StyleSheet.create({
     color: '#333',
     flex: 2,
     textAlign: 'right',
-  },
-  // Image Styles
-  imageContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 10,
-    backgroundColor: '#f8f8f8',
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    width: 300, 
-    height: 300, 
-    alignSelf: 'center',
-  },
-  productImage: {
-    width: 280,
-    height: 280, 
-    borderRadius: 8,
   },
   imagePreviewContainer: {
     width: '100%',
@@ -632,7 +634,62 @@ const styles = StyleSheet.create({
   columnWrapper: {
     justifyContent: 'space-between',
   },
+  variantsSummary: {
+    marginTop: 4,
+  },
+  variantsText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  variantsDetails: {
+    fontSize: 11,
+    color: '#999',
+  },
+  variantCard: {
+    backgroundColor: '#f8f8f8',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  variantTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 6,
+  },
+  variantDetails: {
+    marginLeft: 8,
+  },
+  placeholderImage: {
+  backgroundColor: '#e0e0e0',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+placeholderText: {
+  color: '#999',
+  fontSize: 12,
+},
+imagesContainer: {
+  flexDirection: 'row',
+  paddingVertical: 10,
+},
+variantImageContainer: {
+  marginRight: 15,
+  alignItems: 'center',
+},
+variantImage: {
+  width: 120,
+  height: 120,
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: '#e0e0e0',
+},
+variantImageLabel: {
+  marginTop: 5,
+  fontSize: 12,
+  color: '#666',
+  textAlign: 'center',
+},
 });
 
 export default ProductsScreen;
-

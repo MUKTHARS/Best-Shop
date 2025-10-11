@@ -1,6 +1,6 @@
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: 'http://10.150.254.234:8080',
+  BASE_URL: 'http://10.150.253.4:8080',
   TIMEOUT: 10000,
   UPLOAD_TIMEOUT: 30000,
 };

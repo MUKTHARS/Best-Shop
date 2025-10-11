@@ -27,6 +27,27 @@ func main() {
 	// Static files
 	router.Static("/uploads", "./uploads")
 
+	// Health check and root endpoint
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "Stock Management API is running",
+			"status":  "active",
+		})
+	})
+
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status": "healthy",
+		})
+	})
+
+	// Connection test endpoint
+	router.GET("/login", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "Server is running. Use POST /login for authentication.",
+		})
+	})
+
 	// Public routes
 	router.POST("/login", handlers.Login)
 
@@ -70,7 +91,7 @@ func main() {
 		auth.GET("/stock-entries", handlers.GetStockEntries)
 		auth.POST("/stock-entries", handlers.CreateStockEntry)
 		auth.POST("/upload-image", handlers.UploadImage)
-
+auth.GET("/products/:id/variants", handlers.GetProductVariants)
 		// Dashboard
 		auth.GET("/dashboard-stats", handlers.GetDashboardStats)
 
@@ -92,10 +113,7 @@ func main() {
 	}
 
 	// Start server
-	serverAddr := config.GetServerAddress()
+	serverAddr := "0.0.0.0:8080"
 	log.Printf("🚀 Server running on %s", serverAddr)
 	log.Fatal(router.Run(serverAddr))
 }
-
-
-	

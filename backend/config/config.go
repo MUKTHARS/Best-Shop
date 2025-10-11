@@ -33,9 +33,9 @@ func LoadConfig() {
 		DBHost:     getEnv("DB_HOST", "localhost"),
 		DBPort:     getEnv("DB_PORT", "3306"),
 		DBUser:     getEnv("DB_USER", "root"),
-		DBPassword: getEnv("DB_PASSWORD", ""),
+		DBPassword: getEnv("DB_PASSWORD", "1234"),
 		DBName:     getEnv("DB_NAME", "stock_management"),
-		JWTSecret:  getEnv("JWT_SECRET", "your-default-secret-key"),
+		JWTSecret:  getEnv("JWT_SECRET", "1a2b3c4d5e"),
 		JWTExpiry:  getEnv("JWT_EXPIRY", "24h"),
 	}
 }

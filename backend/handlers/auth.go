@@ -107,22 +107,3 @@ func ResetPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully"})
 } 
 
-// func ResetPassword(c *gin.Context) {
-// 	var req struct {
-// 		UserID      int    `json:"user_id" binding:"required"`
-// 		NewPassword string `json:"new_password" binding:"required"`
-// 	}
-
-// 	if err := c.BindJSON(&req); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
-// 		return
-// 	}
-
-// 	err := utils.ResetUserPassword(req.UserID, req.NewPassword)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset password"})
-// 		return
-// 	}
-
-// 	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully"})
-// }
