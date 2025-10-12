@@ -47,7 +47,7 @@ const LoginScreen = ({ navigation }) => {
       console.log('❌ Connection test failed:', error.message);
       Alert.alert(
         'Connection Error', 
-        `Cannot connect to server: ${error.message}\n\nPlease ensure:\n• Backend server is running\n• Correct IP address: 10.150.253.4:8080\n• Network connection is stable`
+        `Cannot connect to server: ${error.message}\n\nPlease ensure:\n• Backend server is running\n• Correct IP address\n• Network connection is stable`
       );
       return false;
     }

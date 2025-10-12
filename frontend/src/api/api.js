@@ -8,7 +8,7 @@ const API_BASE_URL = Platform.OS === 'android' ? 'http://10.150.253.4:8080' : 'h
 console.log('🔧 API Configuration:', {
   baseURL: API_BASE_URL,
   platform: Platform.OS,
-  androidNote: Platform.OS === 'android' ? 'Using 10.150.253.4 for Android emulator' : 'Using localhost'
+  androidNote: Platform.OS === 'android' ? 'Using  for Android emulator' : 'Using localhost'
 });
 
 class API {
