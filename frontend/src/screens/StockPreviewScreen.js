@@ -18,45 +18,44 @@ const StockPreviewScreen = ({ route, navigation }) => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async () => {
-    setIsLoading(true);
-    try {
-      // First create the product
-      const productData = {
-        item_id: formData.itemId,
-        item_name: formData.itemName,
-        category_id: formData.categoryId ? parseInt(formData.categoryId) : null,
-        subcategory_id: formData.subcategoryId ? parseInt(formData.subcategoryId) : null,
-        brand_id: formData.brandId ? parseInt(formData.brandId) : null,
-        model: formData.model,
-        description: formData.description,
-        low_stock_threshold: 10, // Default value
-        variants: formData.variants.map(variant => ({
-          gender: variant.gender,
-          size: variant.size,
-          color: variant.color,
-          mrp: parseFloat(variant.mrp) || 0,
-          selling_price: parseFloat(variant.sellingPrice) || 0,
-          cost_price: parseFloat(variant.costPrice) || 0,
-          sku: variant.sku,
-          barcode: variant.barcode,
-          current_stock: parseInt(variant.purchaseQuantity) || 0,
-        }))
-      };
+ const handleSubmit = async () => {
+  setIsLoading(true);
+  try {
+    const productData = {
+      item_id: formData.itemId,
+      item_name: formData.itemName,
+      category_id: formData.categoryId ? parseInt(formData.categoryId) : null,
+      subcategory_id: formData.subcategoryId ? parseInt(formData.subcategoryId) : null,
+      brand_id: formData.brandId ? parseInt(formData.brandId) : null,
+      model: formData.model,
+      description: formData.description,
+      low_stock_threshold: 10,
+      variants: formData.variants.map((variant, index) => ({
+        gender: variant.gender,
+        size: variant.size,
+        color: variant.color,
+        mrp: parseFloat(variant.mrp) || 0,
+        selling_price: parseFloat(variant.sellingPrice) || 0,
+        cost_price: parseFloat(variant.costPrice) || 0,
+        sku: variant.sku,
+        barcode: variant.barcode,
+        current_stock: parseInt(variant.purchaseQuantity) || 0,
+        image_url: formData.imageUrl 
+      }))
+    };
 
-      // Use createProduct instead of createProductWithVariants
-      const product = await stockAPI.createProduct(productData);
+    const product = await stockAPI.createProduct(productData);
 
-      Alert.alert('Success', 'Product with variants added successfully!', [
-        { text: 'OK', onPress: () => navigation.navigate('Dashboard') }
-      ]);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to add product: ' + error.message);
-      console.log('Error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    Alert.alert('Success', 'Product with variants added successfully!', [
+      { text: 'OK', onPress: () => navigation.navigate('Dashboard') }
+    ]);
+  } catch (error) {
+    Alert.alert('Error', 'Failed to add product: ' + error.message);
+    console.log('Error:', error);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const renderVariantItem = ({ item, index }) => (
     <View style={styles.variantCard}>

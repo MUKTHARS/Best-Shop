@@ -60,7 +60,7 @@ type ProductVariant struct {
 	SKU          string  `json:"sku"`
 	Barcode      string  `json:"barcode"`
 	CurrentStock int     `json:"current_stock"`
-	
+	ImageURL     string  `json:"image_url"`
 	IsActive     bool    `json:"is_active"`
 }
 
@@ -71,10 +71,10 @@ type ProductWithVariants struct {
 func UpdateProductVariantTx(tx *sql.Tx, variant *ProductVariant) error {
 	_, err := tx.Exec(`
 		UPDATE product_variants 
-		SET gender=?, size=?, color=?, mrp=?, selling_price=?, cost_price=?, sku=?, barcode=?, current_stock=?
+		SET gender=?, size=?, color=?, mrp=?, selling_price=?, cost_price=?, sku=?, barcode=?, current_stock=?, image_url=?
 		WHERE id=?`,
 		variant.Gender, variant.Size, variant.Color, variant.MRP, variant.SellingPrice,
-		variant.CostPrice, variant.SKU, variant.Barcode, variant.CurrentStock,
+		variant.CostPrice, variant.SKU, variant.Barcode, variant.CurrentStock, variant.ImageURL, // Add ImageURL
 		variant.ID)
 	return err
 }
@@ -97,12 +97,13 @@ func CreateProductTx(tx *sql.Tx, product *Product) error {
 	product.IsActive = true
 	return nil
 }
+
 func CreateProductVariantTx(tx *sql.Tx, variant *ProductVariant) error {
 	result, err := tx.Exec(`
-		INSERT INTO product_variants (product_id, gender, size, color, mrp, selling_price, cost_price, sku, barcode, current_stock)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		INSERT INTO product_variants (product_id, gender, size, color, mrp, selling_price, cost_price, sku, barcode, current_stock, image_url)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		variant.ProductID, variant.Gender, variant.Size, variant.Color, variant.MRP, variant.SellingPrice,
-		variant.CostPrice, variant.SKU, variant.Barcode, variant.CurrentStock)
+		variant.CostPrice, variant.SKU, variant.Barcode, variant.CurrentStock, variant.ImageURL) // Add ImageURL
 	if err != nil {
 		return err
 	}
@@ -116,7 +117,7 @@ func CreateProductVariantTx(tx *sql.Tx, variant *ProductVariant) error {
 	variant.IsActive = true
 	return nil
 }
-// Existing functions remain the same...
+
 func GetAllCategories(db *sql.DB) ([]Category, error) {
 	rows, err := db.Query("SELECT id, name, description, is_active, created_at FROM categories WHERE is_active = true ORDER BY name")
 	if err != nil {
@@ -262,78 +263,93 @@ func CreateProductVariant(db *sql.DB, variant *ProductVariant) error {
 	return nil
 }
 
-// Get variants by product ID
 func GetVariantsByProductID(db *sql.DB, productID int) ([]ProductVariant, error) {
-	rows, err := db.Query(`
-		SELECT id, product_id, gender, size, color, mrp, selling_price, cost_price, sku, barcode, current_stock, is_active
-		FROM product_variants 
-		WHERE product_id = ? AND is_active = true 
-		ORDER BY gender, size, color`, productID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+    rows, err := db.Query(`
+        SELECT id, product_id, gender, size, color, mrp, selling_price, cost_price, sku, barcode, current_stock, is_active, image_url
+        FROM product_variants 
+        WHERE product_id = ? AND is_active = true 
+        ORDER BY gender, size, color`, productID)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
 
-	var variants []ProductVariant
-	for rows.Next() {
-		var variant ProductVariant
-		if err := rows.Scan(
-			&variant.ID, &variant.ProductID, &variant.Gender, &variant.Size, &variant.Color,
-			&variant.MRP, &variant.SellingPrice, &variant.CostPrice,
-			&variant.SKU, &variant.Barcode, &variant.CurrentStock, &variant.IsActive,
-		); err != nil {
-			return nil, err
-		}
-		variants = append(variants, variant)
-	}
-	return variants, nil
+    var variants []ProductVariant
+    for rows.Next() {
+        var variant ProductVariant
+        if err := rows.Scan(
+            &variant.ID, &variant.ProductID, &variant.Gender, &variant.Size, &variant.Color,
+            &variant.MRP, &variant.SellingPrice, &variant.CostPrice,
+            &variant.SKU, &variant.Barcode, &variant.CurrentStock, &variant.IsActive, &variant.ImageURL,
+        ); err != nil {
+            return nil, err
+        }
+        variants = append(variants, variant)
+    }
+    
+    // Check for errors during iteration
+    if err = rows.Err(); err != nil {
+        return nil, err
+    }
+    
+    return variants, nil
 }
 
-// Updated GetAllProducts to include variants
 func GetAllProducts(db *sql.DB) ([]ProductWithVariants, error) {
-	rows, err := db.Query(`
-		SELECT id, item_id, item_name, category_id, subcategory_id, brand_id, model, 
-		       description, is_active, low_stock_threshold, created_at, updated_at
-		FROM products WHERE is_active = true ORDER BY item_name`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+    rows, err := db.Query(`
+        SELECT id, item_id, item_name, category_id, subcategory_id, brand_id, model, 
+               description, is_active, low_stock_threshold, created_at, updated_at
+        FROM products WHERE is_active = true ORDER BY item_name`)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
 
-	var products []ProductWithVariants
-	for rows.Next() {
-		var p ProductWithVariants
-		var categoryID, subcategoryID, brandID sql.NullInt64
-		
-		if err := rows.Scan(
-			&p.ID, &p.ItemID, &p.ItemName, &categoryID, &subcategoryID, &brandID,
-			&p.Model, &p.Description, &p.IsActive, &p.LowStockThreshold, 
-			&p.CreatedAt, &p.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		
-		// Handle nullable foreign keys
-		if categoryID.Valid {
-			p.CategoryID = &[]int{int(categoryID.Int64)}[0]
-		}
-		if subcategoryID.Valid {
-			p.SubcategoryID = &[]int{int(subcategoryID.Int64)}[0]
-		}
-		if brandID.Valid {
-			p.BrandID = &[]int{int(brandID.Int64)}[0]
-		}
-		
-		// Get variants for this product
-		variants, err := GetVariantsByProductID(db, p.ID)
-		if err != nil {
-			return nil, err
-		}
-		p.Variants = variants
-		
-		products = append(products, p)
-	}
-	return products, nil
+    var products []ProductWithVariants
+    for rows.Next() {
+        var p ProductWithVariants
+        var categoryID, subcategoryID, brandID sql.NullInt64
+        
+        if err := rows.Scan(
+            &p.ID, &p.ItemID, &p.ItemName, &categoryID, &subcategoryID, &brandID,
+            &p.Model, &p.Description, &p.IsActive, &p.LowStockThreshold, 
+            &p.CreatedAt, &p.UpdatedAt,
+        ); err != nil {
+            return nil, err
+        }
+        
+        // Handle nullable foreign keys properly
+        if categoryID.Valid {
+            catID := int(categoryID.Int64)
+            p.CategoryID = &catID
+        }
+        if subcategoryID.Valid {
+            subcatID := int(subcategoryID.Int64)
+            p.SubcategoryID = &subcatID
+        }
+        if brandID.Valid {
+            brID := int(brandID.Int64)
+            p.BrandID = &brID
+        }
+        
+        // Get variants for this product
+        variants, err := GetVariantsByProductID(db, p.ID)
+        if err != nil {
+            // Instead of returning error, continue with empty variants
+            p.Variants = []ProductVariant{}
+        } else {
+            p.Variants = variants
+        }
+        
+        products = append(products, p)
+    }
+    
+    // Check for errors during iteration
+    if err = rows.Err(); err != nil {
+        return nil, err
+    }
+    
+    return products, nil
 }
 
 // Get product by ID with variants
